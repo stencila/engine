@@ -1,4 +1,4 @@
-import { getIndexesFromRange, qualifiedId } from '../shared/cellHelpers'
+import { getIndexesFromRange, qualifiedId } from './engineHelpers'
 
 /*
  * A class representing symbols used in Stencila Cells to reference other cells, or ranges.

@@ -1,12 +1,16 @@
 import { flatten, isString, isArray } from 'substance'
-import { CellError, UnresolvedInputError, CyclicDependencyError, OutputCollisionError } from './CellErrors'
-import { UNKNOWN, ANALYSED, BROKEN, FAILED, BLOCKED, WAITING, READY, RUNNING, OK, toInteger } from './CellStates'
+import {
+  CellError, UnresolvedInputError, CyclicDependencyError, OutputCollisionError
+} from './CellErrors'
+import {
+  UNKNOWN, ANALYSED, BROKEN, FAILED, BLOCKED, WAITING, READY, RUNNING, OK,
+  toInteger
+} from './CellStates'
 
 const MSG_UNRESOLVED_INPUT = 'Unresolved input.'
 
 export default class CellGraph {
-
-  constructor() {
+  constructor () {
     // cell data by id
     this._cells = {}
     // symbols -> cell ids; which cell is depending on a symbol
@@ -23,19 +27,19 @@ export default class CellGraph {
     this._valueUpdated = new Set()
   }
 
-  needsUpdate() {
+  needsUpdate () {
     return this._stateChanged.size > 0 || this._structureChanged.size > 0 || this._valueUpdated.size > 0
   }
 
-  hasCell(id) {
+  hasCell (id) {
     return this._cells.hasOwnProperty(id)
   }
 
-  getCell(id) {
+  getCell (id) {
     return this._cells[id]
   }
 
-  addCell(cell) {
+  addCell (cell) {
     const id = cell.id
     if (this._cells[id]) throw new Error(`Cell with ${id} already exists`)
     this._cells[id] = cell
@@ -48,7 +52,7 @@ export default class CellGraph {
     }
   }
 
-  removeCell(id) {
+  removeCell (id) {
     const cell = this._cells[id]
     if (!cell) throw new Error('Internal error: cell does not exist.')
     cell.inputs.forEach(s => {
@@ -70,13 +74,13 @@ export default class CellGraph {
     this._valueUpdated.delete(cell.id)
   }
 
-  getValue(symbol) {
+  getValue (symbol) {
     let cellId = this._out[symbol]
     if (!cellId) return undefined
     // if there is a name collision return undefined
     // TODO: should we allow this at all?
     if (isArray(cellId)) {
-      throw new Error('Ambigous symbol: '+symbol)
+      throw new Error('Ambigous symbol: ' + symbol)
     }
 
     const cell = this._cells[cellId]
@@ -86,7 +90,7 @@ export default class CellGraph {
     return cell.value
   }
 
-  setInputsOutputs(id, newInputs, newOutput) {
+  setInputsOutputs (id, newInputs, newOutput) {
     let cell = this._cells[id]
     if (!cell) throw new Error(`Unknown cell ${id}`)
     this._setInputs(cell, newInputs)
@@ -98,7 +102,7 @@ export default class CellGraph {
   }
 
   // Note: we use this for sheet cells
-  setInputs(id, newInputs) {
+  setInputs (id, newInputs) {
     let cell = this._cells[id]
     if (!cell) throw new Error(`Unknown cell ${id}`)
     this._setInputs(cell, newInputs)
@@ -110,22 +114,22 @@ export default class CellGraph {
 
   // used to update sheet cell output symbols after structural
   // changes. In this case there are typically a lot of other changes, too
-  setOutput(id, newOutput) {
+  setOutput (id, newOutput) {
     let cell = this._cells[id]
     if (!cell) throw new Error(`Unknown cell ${id}`)
     this._setOutput(cell, newOutput)
   }
 
-  _setInputs(cell, newInputs) {
+  _setInputs (cell, newInputs) {
     newInputs = new Set(newInputs)
-    if(this._registerInputs(cell.id, cell.inputs, newInputs)) {
+    if (this._registerInputs(cell.id, cell.inputs, newInputs)) {
       cell.inputs = newInputs
       this._clearCyclicDependencyError(cell)
       cell.clearErrors(e => e instanceof UnresolvedInputError)
     }
   }
 
-  _setOutput(cell, newOutput) {
+  _setOutput (cell, newOutput) {
     // TODO: if only the output of a cell changed, we could retain the runtime result
     // and leave the cell's state untouched
     let oldOutput = cell.output
@@ -137,30 +141,30 @@ export default class CellGraph {
     }
   }
 
-  _setNext(id, nextId) {
+  _setNext (id, nextId) {
     let cell = this._cells[id]
     cell.next = nextId
     this._structureChanged.add(nextId)
   }
 
-  _setPrev(id, prevId) {
+  _setPrev (id, prevId) {
     let cell = this._cells[id]
     cell.prev = prevId
     this._structureChanged.add(id)
   }
 
-  addError(id, error) {
+  addError (id, error) {
     this.addErrors(id, [error])
   }
 
-  addErrors(id, errors) {
+  addErrors (id, errors) {
     let cell = this._cells[id]
     errors = errors.map(err => CellError.cast(err))
     cell.addErrors(errors)
     this._stateChanged.add(id)
   }
 
-  clearErrors(id, type) {
+  clearErrors (id, type) {
     let cell = this._cells[id]
     if (type === 'graph' || !type) {
       this._clearCyclicDependencyError(cell)
@@ -173,7 +177,7 @@ export default class CellGraph {
     this._stateChanged.add(id)
   }
 
-  setValue(id, value) {
+  setValue (id, value) {
     let cell = this._cells[id]
     cell.value = value
     if (cell.hasErrors()) {
@@ -184,7 +188,7 @@ export default class CellGraph {
     this._valueUpdated.add(id)
   }
 
-  _registerInputs(id, oldInputs, newInputs) {
+  _registerInputs (id, oldInputs, newInputs) {
     let toAdd = new Set(newInputs)
     let toRemove = new Set()
     if (oldInputs) {
@@ -214,7 +218,7 @@ export default class CellGraph {
     }
   }
 
-  _registerOutput(id, oldOutput, newOutput) {
+  _registerOutput (id, oldOutput, newOutput) {
     // nothing to be done if no change
     if (oldOutput === newOutput) return false
     // deregister the old output first
@@ -249,7 +253,7 @@ export default class CellGraph {
     return true
   }
 
-  _deregisterOutput(id, output) {
+  _deregisterOutput (id, output) {
     if (this._hasOutputCollision(output)) {
       this._resolveOutputCollision(output, id)
     } else {
@@ -267,7 +271,7 @@ export default class CellGraph {
     }
   }
 
-  update() {
+  update () {
     // a set of cell ids that have been updated
     let updated = new Set()
     let stateChanged = this._stateChanged
@@ -314,7 +318,7 @@ export default class CellGraph {
     return updated
   }
 
-  _detectUnresolvableInputs(id) {
+  _detectUnresolvableInputs (id) {
     let cell = this._cells[id]
     // detect unresolvable inputs
     let inputs = Array.from(cell.inputs)
@@ -326,7 +330,7 @@ export default class CellGraph {
     }
   }
 
-  _detectOutputCollisions(id) {
+  _detectOutputCollisions (id) {
     let cell = this._cells[id]
     let output = cell.output
     if (!output) return
@@ -338,7 +342,7 @@ export default class CellGraph {
     }
   }
 
-  _computeDependencyLevel(id, levels, updated, trace = new Set(), traceSymbols = {}) {
+  _computeDependencyLevel (id, levels, updated, trace = new Set(), traceSymbols = {}) {
     let cell = this._cells[id]
     let inputs = Array.from(cell.inputs)
     trace = new Set(trace)
@@ -380,11 +384,11 @@ export default class CellGraph {
     return level
   }
 
-  _getAffectedCellsSorted(ids) {
+  _getAffectedCellsSorted (ids) {
     let cells = []
     let visited = new Set()
     let q = Array.from(ids)
-    while(q.length > 0) {
+    while (q.length > 0) {
       let id = q.shift()
       if (visited.has(id)) continue
       visited.add(id)
@@ -399,7 +403,7 @@ export default class CellGraph {
     return flatten(cells.filter(Boolean))
   }
 
-  _getAffected(cell) {
+  _getAffected (cell) {
     let affected = []
     if (this._cellProvidesOutput(cell)) {
       affected = Array.from(this._ins[cell.output] || [])
@@ -417,7 +421,7 @@ export default class CellGraph {
     return affected
   }
 
-  _updateStates(ids, updated) {
+  _updateStates (ids, updated) {
     // get all affected cells, i.e. all cells that are depending
     // on the cells with given ids
     let cells = this._getAffectedCellsSorted(ids)
@@ -425,7 +429,7 @@ export default class CellGraph {
     cells.forEach(cell => this._updateCellState(cell, updated))
   }
 
-  _updateCellState(cell, updated) {
+  _updateCellState (cell, updated) {
     // invariant detection of BROKEN state
     if (cell.hasError('engine') || cell.hasError('graph')) {
       if (cell.status === BROKEN) return
@@ -486,16 +490,16 @@ export default class CellGraph {
     }
   }
 
-  _resolve(symbol) {
+  _resolve (symbol) {
     return this._out[symbol]
   }
 
-  _cellProvidesOutput(cell) {
+  _cellProvidesOutput (cell) {
     return (cell.output && cell.id === this._out[cell.output])
   }
 
   // set of cell ids that depend on the given ones
-  _getFollowSet(ids) {
+  _getFollowSet (ids) {
     let followSet = new Set()
     ids.forEach(id => {
       const cell = this._cells[id]
@@ -505,7 +509,7 @@ export default class CellGraph {
   }
 
   // get a set of all ids a cell is depending on (recursively)
-  _getPredecessorSet(id, set) {
+  _getPredecessorSet (id, set) {
     if (!set) set = new Set()
     const _recursive = (id) => {
       if (!set.has(id)) {
@@ -530,7 +534,7 @@ export default class CellGraph {
     return set
   }
 
-  _handleCycle(trace, traceSymbols, updated) {
+  _handleCycle (trace, traceSymbols, updated) {
     let error = new CyclicDependencyError('Cyclic dependency', { trace, symbols: traceSymbols })
     trace.forEach(id => {
       let cell = this._cells[id]
@@ -541,7 +545,7 @@ export default class CellGraph {
     })
   }
 
-  _clearCyclicDependencyError(cell) {
+  _clearCyclicDependencyError (cell) {
     let err = cell.errors.find(err => err instanceof CyclicDependencyError)
     if (err) {
       const trace = err.details.trace
@@ -553,11 +557,11 @@ export default class CellGraph {
     }
   }
 
-  _hasOutputCollision(symbol) {
+  _hasOutputCollision (symbol) {
     return isArray(this._out[symbol])
   }
 
-  _removeOutputCollisionError(id) {
+  _removeOutputCollisionError (id) {
     let cell = this._cells[id]
     cell.clearErrors(e => e instanceof OutputCollisionError)
     this._structureChanged.add(id)
@@ -568,7 +572,7 @@ export default class CellGraph {
     Removes the cell id from the list of competing cells
     and removes errors if possible.
   */
-  _resolveOutputCollision(symbol, id) {
+  _resolveOutputCollision (symbol, id) {
     let out = this._out[symbol]
     // in case of collisions we store the competing cell ids as array
     if (isArray(out)) {

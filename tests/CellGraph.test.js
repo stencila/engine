@@ -1,9 +1,9 @@
 import test from 'tape'
 
-import CellGraph from '../../src/engine/CellGraph'
-import Cell from '../../src/engine/Cell'
-import { SyntaxError, RuntimeError, ContextError } from '../../src/engine/CellErrors'
-import { UNKNOWN, ANALYSED, BROKEN, BLOCKED, WAITING, READY, OK, FAILED, toString } from '../../src/engine/CellStates'
+import CellGraph from '../src/CellGraph'
+import Cell from '../src/Cell'
+import { SyntaxError, RuntimeError, ContextError } from '../src/CellErrors'
+import { UNKNOWN, ANALYSED, BROKEN, BLOCKED, WAITING, READY, OK, FAILED, toString } from '../src/CellStates'
 
 /*
  add a single cell with no deps

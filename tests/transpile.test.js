@@ -1,6 +1,6 @@
 import test from 'tape'
 
-import { transpile } from '../../src/shared/expressionHelpers'
+import { transpile } from '../src/engineHelpers'
 
 test('transpile: local variables should not be transpiled', t => {
   let source = 'x + y'

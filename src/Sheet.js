@@ -1,6 +1,8 @@
 import { uuid, isString } from 'substance'
-import { getCellLabel, getColumnLabel, qualifiedId as _qualifiedId } from '../shared/cellHelpers'
-import { recordTransformations, applyCellTransformations } from './engineHelpers'
+import { 
+  recordTransformations, applyCellTransformations, getCellLabel, getColumnLabel, 
+  qualifiedId as _qualifiedId 
+} from './engineHelpers'
 import SheetCell from './SheetCell'
 
 /*

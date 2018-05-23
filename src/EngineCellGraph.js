@@ -1,6 +1,6 @@
 import { flatten } from 'substance'
-import { getRangeFromMatrix } from '../shared/cellHelpers'
 import CellGraph from './CellGraph'
+import { getRangeFromMatrix } from './engineHelpers'
 
 export default class EngineCellGraph extends CellGraph {
   constructor(engine) {

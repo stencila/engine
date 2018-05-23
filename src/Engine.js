@@ -2,8 +2,7 @@ import { isString, EventEmitter, flatten } from 'substance'
 import { ContextError, RuntimeError, SyntaxError } from './CellErrors'
 import { UNKNOWN, ANALYSED, READY, toInteger as statusToInt } from './CellStates'
 import CellSymbol from './CellSymbol'
-import { gather } from '../value'
-import { valueFromText, getColumnLabel, qualifiedId as _qualifiedId } from '../shared/cellHelpers'
+import { gather, valueFromText, getColumnLabel, qualifiedId as _qualifiedId } from './engineHelpers'
 import EngineCellGraph from './EngineCellGraph'
 import Sheet from './Sheet'
 import Document from './Document'
@@ -96,11 +95,9 @@ import Document from './Document'
   If we wanted to still allow this, we would need some kind of an alias mechanism
   in the table type.
 
-
 */
 export default class Engine extends EventEmitter {
-
-  constructor(options = {}) {
+  constructor (options = {}) {
     super()
 
     // needs to be connected to a host to be able to create contexts
@@ -120,7 +117,7 @@ export default class Engine extends EventEmitter {
     this._currentActions = new Map()
   }
 
-  setHost(host) {
+  setHost (host) {
     this._host = host
   }
 
@@ -147,31 +144,31 @@ export default class Engine extends EventEmitter {
       - `columns`: (for sheets) initial column data
       - 'sequence': (for documents) initial order of cells
   */
-  addDocument(data) {
+  addDocument (data) {
     let doc = new Document(this, data)
     this._registerResource(doc)
     return doc
   }
 
-  addSheet(data) {
+  addSheet (data) {
     let sheet = new Sheet(this, data)
     this._registerResource(sheet)
     return sheet
   }
 
-  hasResource(id) {
+  hasResource (id) {
     return this._docs.hasOwnProperty(id)
   }
 
-  getResource(id) {
+  getResource (id) {
     return this._docs[id]
   }
 
-  needsUpdate() {
+  needsUpdate () {
     return this._nextActions.size > 0 || this._graph.needsUpdate()
   }
 
-  cycle() {
+  cycle () {
     let res = []
     const graph = this._graph
     const nextActions = this._nextActions
@@ -230,11 +227,11 @@ export default class Engine extends EventEmitter {
     return res
   }
 
-  getNextActions() {
+  getNextActions () {
     return this._nextActions
   }
 
-  _registerResource(doc) {
+  _registerResource (doc) {
     const id = doc.id
     if (this._docs.hasOwnProperty(id)) throw new Error(`document with id ${id} already exists`)
     this._docs[id] = doc
@@ -252,7 +249,7 @@ export default class Engine extends EventEmitter {
     and can define a variable. In a sheet every cell must be a simple expression
     and it is is assigned to a variable implicitly (such as `sheet1!A1`).
   */
-  _registerCell(cell) {
+  _registerCell (cell) {
     this._graph.addCell(cell)
     this._updateCell(cell.id, {})
   }
@@ -268,7 +265,7 @@ export default class Engine extends EventEmitter {
     }
   }
 
-  _updateCell(id, cellData) {
+  _updateCell (id, cellData) {
     const graph = this._graph
     let cell = graph.getCell(id)
     Object.assign(cell, cellData)
@@ -280,7 +277,7 @@ export default class Engine extends EventEmitter {
     })
   }
 
-  _sendUpdate(type, cells) {
+  _sendUpdate (type, cells) {
     let cellsByDocId = {}
     cells.forEach(cell => {
       let _cells = cellsByDocId[cell.docId]
@@ -290,7 +287,7 @@ export default class Engine extends EventEmitter {
     this.emit('update', type, cellsByDocId)
   }
 
-  _updateGraph() {
+  _updateGraph () {
     const graph = this._graph
     let updatedIds = graph.update()
     let cells = new Set()
@@ -315,7 +312,7 @@ export default class Engine extends EventEmitter {
     }
   }
 
-  _analyse(action) {
+  _analyse (action) {
     const graph = this._graph
     const id = action.id
     const cell = graph.getCell(id)
@@ -348,66 +345,66 @@ export default class Engine extends EventEmitter {
     const transpiledSource = cell.transpiledSource
     const lang = cell.getLang()
     return this._getContext(lang)
-    .then(res => {
+      .then(res => {
       // stop if this was aboreted or there is already a new action for this id
-      if (this._isSuperseded(id, action)) {
+        if (this._isSuperseded(id, action)) {
         // console.log('action has been superseded')
-        return
-      }
-      if (res instanceof Error) {
-        const msg = `Could not get context for ${lang}`
-        console.error(msg)
-        let err = new ContextError(msg, { lang })
-        graph.addError(id, err)
-      } else {
-        const context = res
-        return context.analyseCode(transpiledSource)
-      }
-    })
-    .then(res => {
-      if (this._isSuperseded(id, action)) {
-        // console.log('action has been superseded')
-        return
-      }
-      this._currentActions.delete(id)
-      // stop if this was aboreted or there is already a new action for this id
-      if (!res) return
-      // Note: treating all errors coming from analyseCode() as SyntaxErrors
-      // TODO: we might want to be more specific here
-      if (res.messages && res.messages.length > 0) {
-        // TODO: we should not need to set this manually
-        cell.status = ANALYSED
-        graph.addErrors(id, res.messages.map(err => {
-          return new SyntaxError(err.message)
-        }))
-      }
-      // console.log('analysed cell', cell, res)
-      // transform the extracted symbols into fully-qualified symbols
-      // e.g. in `x` in `sheet1` is compiled into `sheet1.x`
-      // Note: to make the app more robust we are doing this in
-      //   a try catch block, and create a rather unspecifc SyntaxError.
-      //   This can happen when the transpiled code is not producing
-      //   a syntax error but not producing expected input symbols.
-      let inputs = new Set()
-      let output = null
-      try {
-        ( { inputs, output } = this._compile(res, cell) )
-      } catch (error) {
-        cell.status = ANALYSED
-        graph.addErrors(id, [new SyntaxError('Invalid syntax')])
-      }
-      this._setAction(id, {
-        type: 'register',
-        id,
-        // Note: these symbols are in plain-text analysed by the context
-        // based on the transpiled source
-        inputs,
-        output
+          return
+        }
+        if (res instanceof Error) {
+          const msg = `Could not get context for ${lang}`
+          console.error(msg)
+          let err = new ContextError(msg, { lang })
+          graph.addError(id, err)
+        } else {
+          const context = res
+          return context.analyseCode(transpiledSource)
+        }
       })
-    })
+      .then(res => {
+        if (this._isSuperseded(id, action)) {
+        // console.log('action has been superseded')
+          return
+        }
+        this._currentActions.delete(id)
+        // stop if this was aboreted or there is already a new action for this id
+        if (!res) return
+        // Note: treating all errors coming from analyseCode() as SyntaxErrors
+        // TODO: we might want to be more specific here
+        if (res.messages && res.messages.length > 0) {
+        // TODO: we should not need to set this manually
+          cell.status = ANALYSED
+          graph.addErrors(id, res.messages.map(err => {
+            return new SyntaxError(err.message)
+          }))
+        }
+        // console.log('analysed cell', cell, res)
+        // transform the extracted symbols into fully-qualified symbols
+        // e.g. in `x` in `sheet1` is compiled into `sheet1.x`
+        // Note: to make the app more robust we are doing this in
+        //   a try catch block, and create a rather unspecifc SyntaxError.
+        //   This can happen when the transpiled code is not producing
+        //   a syntax error but not producing expected input symbols.
+        let inputs = new Set()
+        let output = null
+        try {
+          ({ inputs, output } = this._compile(res, cell))
+        } catch (error) {
+          cell.status = ANALYSED
+          graph.addErrors(id, [new SyntaxError('Invalid syntax')])
+        }
+        this._setAction(id, {
+          type: 'register',
+          id,
+          // Note: these symbols are in plain-text analysed by the context
+          // based on the transpiled source
+          inputs,
+          output
+        })
+      })
   }
 
-  _evaluate(action) {
+  _evaluate (action) {
     const graph = this._graph
     const id = action.id
     const cell = graph.getCell(id)
@@ -422,47 +419,47 @@ export default class Engine extends EventEmitter {
     // EXPERIMENTAL: remove 'autorun'
     delete cell.autorun
     return this._getContext(lang)
-    .then(res => {
-      if (this._isSuperseded(id, action)) {
+      .then(res => {
+        if (this._isSuperseded(id, action)) {
         // console.log('action has been superseded')
-        return
-      }
-      if (res instanceof Error) {
-        const msg = `Could not get context for ${lang}`
-        console.error(msg)
-        let err = new ContextError(msg, { lang })
-        graph.addError(id, err)
-      } else {
-        const context = res
-        // console.log('EXECUTING cell', cell.id, transpiledSource)
-        // Catching errors here and turn them into a runtime error
-        try {
-          let inputs = this._getInputValues(cell.inputs)
-          return context.executeCode(transpiledSource, inputs)
-        } catch (err) {
-          graph.addError(id, new RuntimeError(err.message, err))
+          return
         }
-      }
-    })
-    .then(res => {
-      if (this._isSuperseded(id, action)) {
+        if (res instanceof Error) {
+          const msg = `Could not get context for ${lang}`
+          console.error(msg)
+          let err = new ContextError(msg, { lang })
+          graph.addError(id, err)
+        } else {
+          const context = res
+          // console.log('EXECUTING cell', cell.id, transpiledSource)
+          // Catching errors here and turn them into a runtime error
+          try {
+            let inputs = this._getInputValues(cell.inputs)
+            return context.executeCode(transpiledSource, inputs)
+          } catch (err) {
+            graph.addError(id, new RuntimeError(err.message, err))
+          }
+        }
+      })
+      .then(res => {
+        if (this._isSuperseded(id, action)) {
         // console.log('action has been superseded')
-        return
-      }
-      this._currentActions.delete(id)
-      // stop if this was aboreted or there is already a new action for this id
-      if (res) {
-        this._setAction(id, {
-          type: 'update',
-          id,
-          errors: res.messages,
-          value: res.value
-        })
-      }
-    })
+          return
+        }
+        this._currentActions.delete(id)
+        // stop if this was aboreted or there is already a new action for this id
+        if (res) {
+          this._setAction(id, {
+            type: 'update',
+            id,
+            errors: res.messages,
+            value: res.value
+          })
+        }
+      })
   }
 
-  _compile(res, cell) {
+  _compile (res, cell) {
     const symbolMapping = cell.symbolMapping
     const docId = cell.docId
     let inputs = new Set()
@@ -501,12 +498,12 @@ export default class Engine extends EventEmitter {
     }
     ```
   */
-  _getInputValues(inputs) {
+  _getInputValues (inputs) {
     const graph = this._graph
     let result = {}
     inputs.forEach(s => {
       let val
-      switch(s.type) {
+      switch (s.type) {
         case 'cell': {
           let sheet = this._docs[s.docId]
           if (sheet) {
@@ -532,11 +529,26 @@ export default class Engine extends EventEmitter {
     return result
   }
 
-  _getContext(lang) {
-    return this._host.createContext(lang)
+  _getContext (lang) {
+    // TODO: it should not be the responsibility of the Engine to create contexts.
+    // Thus, even if the host caches the context, this is the wrong semantics.
+    // IMO the host should use a proxy that dispatches requests to real contexts
+    // The connection to the proxy should be established from the beginning.
+    // The proxy could spawn contexts on demand.
+    // Reconfiguration (i.e. adding/removing/changing a context) can be done in one
+    // asychronous update.
+    // Thus, getting the context should be a synchronous method.
+    // return this._host.createContext(lang)
+
+    let context = this._host.getContext(lang)
+    if (context) {
+      return Promise.resolve(context)
+    } else {
+      return Promise.resolve(new Error(`No context available for language ${lang}`))
+    }
   }
 
-  _lookupDocumentId(name) {
+  _lookupDocumentId (name) {
     for (var id in this._docs) { // eslint-disable-line guard-for-in
       let doc = this._docs[id]
       if (doc.name === name || id === name) {
@@ -545,19 +557,19 @@ export default class Engine extends EventEmitter {
     }
   }
 
-  _lookupDocument(name) {
+  _lookupDocument (name) {
     let docId = this._lookupDocumentId(name)
     return this._docs[docId]
   }
 
-  _canRunCell(cell) {
+  _canRunCell (cell) {
     if (cell.hasOwnProperty('autorun')) {
       return cell.autorun
     }
     return cell.doc.autorun
   }
 
-  _allowRunningCellAndPredecessors(id) {
+  _allowRunningCellAndPredecessors (id) {
     const graph = this._graph
     let predecessors = graph._getPredecessorSet(id)
     this._allowRunningCell(id, true)
@@ -566,7 +578,7 @@ export default class Engine extends EventEmitter {
     })
   }
 
-  _allowRunningCell(id, reset) {
+  _allowRunningCell (id, reset) {
     const graph = this._graph
     let cell = graph.getCell(id)
     cell.autorun = true
@@ -580,7 +592,7 @@ export default class Engine extends EventEmitter {
     }
   }
 
-  _allowRunningAllCellsOfDocument(docId) {
+  _allowRunningAllCellsOfDocument (docId) {
     const graph = this._graph
     let doc = this._docs[docId]
     let cells = doc.getCells()
@@ -599,7 +611,7 @@ export default class Engine extends EventEmitter {
     })
   }
 
-  _setAction(id, action) {
+  _setAction (id, action) {
     let currentAction = this._currentActions.get(id)
     if (!currentAction || currentAction.type !== action.type) {
       // console.log('Scheduling action', id, action)
@@ -609,17 +621,16 @@ export default class Engine extends EventEmitter {
     }
   }
 
-  _isSuperseded(id, action) {
+  _isSuperseded (id, action) {
     return (this._currentActions.get(id) !== action)
   }
-
 }
 
-function getCellValue(cell) {
+function getCellValue (cell) {
   return cell ? cell.value : undefined
 }
 
-function _getArrayValueForCells(cells) {
+function _getArrayValueForCells (cells) {
   // TODO: we should try to decouple this implementation from
   // the rest of the application.
   // this is related to the Stencila's type system
@@ -627,7 +638,6 @@ function _getArrayValueForCells(cells) {
   // or we need to introduce an abstraction.
   return gather('array', cells.map(c => getCellValue(c)))
 }
-
 
 /*
   Gathers the value for a cell range
@@ -638,7 +648,7 @@ function _getArrayValueForCells(cells) {
 
   TODO: we should try to avoid using specific coercion here
 */
-function _getValueForRange(sheet, startRow, startCol, endRow, endCol) {
+function _getValueForRange (sheet, startRow, startCol, endRow, endCol) {
   let matrix = sheet.getCells()
   let val
   // range is a single cell
@@ -646,21 +656,18 @@ function _getValueForRange(sheet, startRow, startCol, endRow, endCol) {
   /* istanbul ignore if */
   if (startRow === endRow && startCol === endCol) {
     val = getCellValue(matrix[startRow][startCol])
-  }
   // range is 1D
-  else if (startRow === endRow) {
-    let cells = matrix[startRow].slice(startCol, endCol+1)
+  } else if (startRow === endRow) {
+    let cells = matrix[startRow].slice(startCol, endCol + 1)
     val = _getArrayValueForCells(cells)
-  }
-  else if (startCol === endCol) {
+  } else if (startCol === endCol) {
     let cells = []
     for (let i = startRow; i <= endRow; i++) {
       cells.push(matrix[i][startCol])
     }
     val = _getArrayValueForCells(cells)
-  }
   // range is 2D (-> creating a table)
-  else {
+  } else {
     let data = {}
     for (let j = startCol; j <= endCol; j++) {
       let name = sheet.getColumnName(j) || getColumnLabel(j)
@@ -685,8 +692,8 @@ function _getValueForRange(sheet, startRow, startCol, endRow, endCol) {
       data: {
         type: 'table',
         data,
-        columns: endCol-startCol+1,
-        rows: endRow-startRow+1
+        columns: endCol - startCol + 1,
+        rows: endRow - startRow + 1
       }
     }
   }

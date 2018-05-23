@@ -1,10 +1,150 @@
-import { isNumber } from 'substance'
-import { toIdentifier } from '../shared/expressionHelpers'
-import { getCellLabel, qualifiedId as _qualifiedId } from '../shared/cellHelpers'
+import { isNumber, isString } from 'substance'
 
 export const BROKEN_REF = '#BROKEN_REF'
 
-export function recordTransformations(cell, dim, pos, count, affectedCells, visited) {
+export function getSyntaxTokens (path, tokens) {
+  return tokens ? tokens.map((t) => {
+    return {
+      type: 'code-highlight',
+      name: _getTokenType(t),
+      start: { path, offset: t.start },
+      end: { path, offset: t.end },
+      on () {},
+      off () {}
+    }
+  }) : []
+}
+
+function _getTokenType (t) {
+  return t.type
+}
+
+/*
+  Matchers for transclusions and cell references
+
+  Examples:
+  - A1
+  - A1:B10
+  - Foo!A1
+  - doc1!x
+  - 'My Sheet'!A1:B10
+  - 'My Doc'.x
+*/
+const ID = '([_A-Za-z][_A-Za-z0-9]*)'
+const NAME = "[']([^']+)[']"
+const CELL_ID = '([A-Z]+[1-9][0-9]*)'
+// These characters will be replaced. Add more if needed.
+const INVALID_ID_CHARACTERS = '[^A-Za-z0-9]'
+
+/*
+  A reference can point to a variable, a cell, or a range inside the same document
+  or another one. To avoid matches inside of other symbols, '\b' (word boundary) is used in the expression.
+  `[']` can not be used in combination with '\b'.
+
+  ```
+   ( ( \b ID | ['].+['] )[!] | \b)( CELL_ID([:]CELL_ID)? | ID )
+  ```
+*/
+const REF = '(?:(?:(?:(?:\\b' + ID + '|' + NAME + '))[!])|\\b)(?:' + CELL_ID + '(?:[:]' + CELL_ID + ')?|' + ID + ')'
+const REF_RE = new RegExp(REF)
+/*
+  Transpiles a piece of source code so that it does not contain
+  Transclusion expressions anymore, which are usually not valid in common languages.
+
+  @param {string} code
+  @param {object} map storage for transpiled symbols so that they can be mapped back later on
+  @result
+*/
+export function transpile (code, map = {}) {
+  if (!code) return code
+  let symbols = extractSymbols(code)
+  // Note: we are transpiling without changing the length of the original source
+  // i.e. `'My Sheet'!A1:B10` is transpiled into `_My_Sheet__A1_B10`
+  // thus the symbol locations won't get invalid by this step
+  for (let i = 0; i < symbols.length; i++) {
+    const s = symbols[i]
+    code = code.substring(0, s.startPos) + s.mangledStr + code.slice(s.endPos)
+    let transpiledName = s.mangledStr
+    map[transpiledName] = s
+  }
+  return code
+}
+
+export function extractSymbols (code) {
+  if (!code) return []
+  let re = new RegExp(REF, 'g')
+  let symbols = []
+  let m
+  while ((m = re.exec(code))) {
+    symbols.push(_createSymbol(m))
+  }
+  return symbols
+}
+
+/*
+
+  - `type`: `variable | cell | range`
+  - `id`: a qualified id such as `doc1!x`, `sheet1!A1`, `sheet1!A1:A10`
+  - `mangledStr`: not longer than the orignal which is used for transpiledCode
+  - `scope`: e.g `doc1`, `sheet1`, `'My Document'`"
+  - `symbol`: local symbol id such as `x`, `A1`, `A1:A10`
+*/
+export function parseSymbol (str) {
+  let m = REF_RE.exec(str)
+  if (!m) throw new Error('Unrecognised symbol format.')
+  return _createSymbol(m)
+}
+
+export function qualifiedId (doc, cell) {
+  let cellId = isString(cell) ? cell : cell.id
+  if (doc) {
+    let docId = isString(doc) ? doc : doc.id
+    return `${docId}!${cellId}`
+  } else {
+    return cellId
+  }
+}
+
+/*
+  Replaces all characters that are invalid in a variable identifier.
+
+  Note: replacing characters one-by-one retains the original length or the string
+  which is desired as this does avoid source-mapping. E.g. when a runtime error
+  occurs, the error location can be applied to the original source code without
+  any transformation.
+*/
+export function toIdentifier (str, c = '_') {
+  return str.replace(new RegExp(INVALID_ID_CHARACTERS, 'g'), c)
+}
+
+function _createSymbol (m) {
+  const text = m[0]
+  const startPos = m.index
+  const endPos = text.length + startPos
+  const mangledStr = toIdentifier(text)
+  const scope = m[1] || m[2]
+  const anchor = m[3]
+  const focus = m[4]
+  const varName = m[5]
+  let type, name
+  if (anchor) {
+    if (focus && focus !== anchor) {
+      type = 'range'
+      name = anchor + ':' + focus
+    } else {
+      type = 'cell'
+      name = anchor
+    }
+  } else if (varName) {
+    type = 'var'
+    name = varName
+  } else {
+    throw new Error('Invalid symbol expression')
+  }
+  return { type, text, scope, name, mangledStr, startPos, endPos, anchor, focus }
+}
+
+export function recordTransformations (cell, dim, pos, count, affectedCells, visited) {
   affectedCells = affectedCells || new Set()
   visited = visited || new Set()
   cell.deps.forEach(s => {
@@ -34,7 +174,7 @@ export function recordTransformations(cell, dim, pos, count, affectedCells, visi
   })
 }
 
-export function applyCellTransformations(cell) {
+export function applyCellTransformations (cell) {
   let symbols = Array.from(cell.inputs).sort((a, b) => a.startPos - b.startPos)
   let source = cell._source
   let offset = 0
@@ -91,12 +231,12 @@ export function applyCellTransformations(cell) {
     }
     let newStartPos = s.startPos + offset
     let newEndPos = newStartPos + newOrigStr.length
-    let newSource = source.original.slice(0, s.startPos+offset) + newOrigStr + source.original.slice(s.endPos+offset)
-    let newTranspiled = source.transpiled.slice(0, s.startPos+offset) + newMangledStr + source.transpiled.slice(s.endPos+offset)
+    let newSource = source.original.slice(0, s.startPos + offset) + newOrigStr + source.original.slice(s.endPos + offset)
+    let newTranspiled = source.transpiled.slice(0, s.startPos + offset) + newMangledStr + source.transpiled.slice(s.endPos + offset)
 
     // finally write the updated values
     s.name = newName
-    s.id = _qualifiedId(s.docId, newName)
+    s.id = qualifiedId(s.docId, newName)
     s.scope = newScope
     s.origStr = newOrigStr
     s.mangledStr = newMangledStr
@@ -112,15 +252,15 @@ export function applyCellTransformations(cell) {
   }
 }
 
-export function transformRange(start, end, pos, count) {
+export function transformRange (start, end, pos, count) {
   if (!count) return false
-  if(!isNumber(pos) || !isNumber(count)) throw new Error("pos and count must be integers")
-  if(end < pos) return false
-  if(count > 0) {
-    if(pos <= start) {
+  if (!isNumber(pos) || !isNumber(count)) throw new Error('pos and count must be integers')
+  if (end < pos) return false
+  if (count > 0) {
+    if (pos <= start) {
       start += count
     }
-    if(pos <= end) {
+    if (pos <= end) {
       end += count
     }
   } else {
@@ -135,20 +275,43 @@ export function transformRange(start, end, pos, count) {
       end -= count
     } else {
       if (pos <= start) {
-        start = start - Math.min(count, start-x1)
+        start = start - Math.min(count, start - x1)
       }
       if (pos <= end) {
-        end = end - Math.min(count, end-x1+1)
+        end = end - Math.min(count, end - x1 + 1)
       }
     }
   }
   return { start, end }
 }
 
-export function getCellSymbolName(s) {
+export function getCellSymbolName (s) {
   let newName = getCellLabel(s.startRow, s.startCol)
   if (s.type === 'range') {
     newName += ':' + getCellLabel(s.endRow, s.endCol)
   }
   return newName
+}
+
+export const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+export function getColumnLabel (colIdx) {
+  if (!isNumber(colIdx)) {
+    throw new Error('Illegal argument.')
+  }
+  var label = ''
+  while(true) { // eslint-disable-line
+    var mod = colIdx % ALPHABET.length
+    colIdx = Math.floor(colIdx / ALPHABET.length)
+    label = ALPHABET[mod] + label
+    if (colIdx > 0) colIdx--
+    else if (colIdx === 0) break
+  }
+  return label
+}
+
+export function getCellLabel (rowIdx, colIdx) {
+  let colLabel = getColumnLabel(colIdx)
+  let rowLabel = rowIdx + 1
+  return colLabel + rowLabel
 }

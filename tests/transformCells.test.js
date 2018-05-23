@@ -1,8 +1,8 @@
 import test from 'tape'
 import { forEach } from 'substance'
-import { recordTransformations, applyCellTransformations, BROKEN_REF } from '../../src/engine/engineHelpers'
-import Cell from '../../src/engine/Cell'
-import CellSymbol from '../../src/engine/CellSymbol'
+import { recordTransformations, applyCellTransformations, BROKEN_REF } from '../src/engineHelpers'
+import Cell from '../src/Cell'
+import CellSymbol from '../src/CellSymbol'
 
 const MSG = 'expression should be transformed correctly'
 

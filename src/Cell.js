@@ -1,7 +1,6 @@
 import { isString } from 'substance'
 import { UNKNOWN, toString as cellStatusToString } from './CellStates'
-import { transpile } from '../shared/expressionHelpers'
-import { isExpression, qualifiedId } from '../shared/cellHelpers'
+import { transpile, isExpression, qualifiedId } from './engineHelpers'
 
 export default class Cell {
 

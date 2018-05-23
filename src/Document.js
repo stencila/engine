@@ -1,7 +1,6 @@
 import { uuid, isString } from 'substance'
-import { qualifiedId as _qualifiedId } from '../shared/cellHelpers'
+import { qualifiedId as _qualifiedId, applyCellTransformations } from './engineHelpers'
 import Cell from './Cell'
-import { applyCellTransformations } from './engineHelpers'
 
 /*
   Engine's internal model of a Document.
