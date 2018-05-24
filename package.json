@@ -11,6 +11,7 @@
     "acorn": "5.5.3",
     "astring": "1.3.0",
     "esm": "^3.0.37",
+    "nyc": "^11.8.0",
     "standard": "^11.0.1",
     "stencila-mini": "0.14.2",
     "substance": "1.0.0-preview.63",
@@ -19,7 +20,13 @@
     "tap-spec": "^4.1.1",
     "tape": "^4.9.0"
   },
+  "nyc": {
+    "include": [
+      "src/*.js"
+    ]
+  },
   "scripts": {
+    "cover": "nyc --require esm --reporter=lcov --reporter=text node test",
     "lint": "standard src/**/*.js test/**/*.js",
     "test": "node --require esm test | tap-spec"
   },
