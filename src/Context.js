@@ -10,7 +10,6 @@
  * This class should be extended for JavaScript implementations. All methods return a Promise.
  */
 export default class Context {
-
   /**
    * Get the list of supported programming languages
    *

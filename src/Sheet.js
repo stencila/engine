@@ -1,7 +1,7 @@
 import { uuid, isString } from 'substance'
-import { 
-  recordTransformations, applyCellTransformations, getCellLabel, getColumnLabel, 
-  qualifiedId as _qualifiedId 
+import {
+  recordTransformations, applyCellTransformations, getCellLabel, getColumnLabel,
+  qualifiedId as _qualifiedId
 } from './engineHelpers'
 import SheetCell from './SheetCell'
 
@@ -9,8 +9,7 @@ import SheetCell from './SheetCell'
   Engine's internal model of a Spreadsheet.
 */
 export default class Sheet {
-
-  constructor(engine, data) {
+  constructor (engine, data) {
     this.engine = engine
     const docId = data.id
     if (!docId) throw new Error("'id' is required")
@@ -49,13 +48,13 @@ export default class Sheet {
     if (data.onCellRegister) this.onCellRegister = data.onCellRegister
   }
 
-  get type() { return 'sheet' }
+  get type () { return 'sheet' }
 
-  setAutorun(val) {
+  setAutorun (val) {
     this.autorun = val
   }
 
-  getColumnName(colIdx) {
+  getColumnName (colIdx) {
     let columnMeta = this.columns[colIdx]
     if (columnMeta && columnMeta.name) {
       return columnMeta.name
@@ -64,11 +63,11 @@ export default class Sheet {
     }
   }
 
-  getCells() {
+  getCells () {
     return this.cells
   }
 
-  updateCell(id, cellData) {
+  updateCell (id, cellData) {
     let qualifiedId = _qualifiedId(this.id, id)
     if (isString(cellData)) {
       cellData = { source: cellData }
@@ -76,7 +75,7 @@ export default class Sheet {
     this.engine._updateCell(qualifiedId, cellData)
   }
 
-  insertRows(pos, dataBlock) {
+  insertRows (pos, dataBlock) {
     // TODO: what if all columns and all rows had been removed
     const count = dataBlock.length
     if (count === 0) return
@@ -101,17 +100,17 @@ export default class Sheet {
     this._sendSourceUpdate(affectedCells)
   }
 
-  deleteRows(pos, count) {
+  deleteRows (pos, count) {
     if (count === 0) return
     let affectedCells = new Set()
-    let block = this.cells.slice(pos, pos+count)
+    let block = this.cells.slice(pos, pos + count)
     transformCells(this.engine, this.cells, 0, pos, -count, affectedCells)
     this.cells.splice(pos, count)
     this._unregisterCells(block)
     this._sendSourceUpdate(affectedCells)
   }
 
-  insertCols(pos, dataBlock) {
+  insertCols (pos, dataBlock) {
     const nrows = this.cells.length
     if (dataBlock.length !== nrows) throw new Error('Invalid dimensions')
     let count = dataBlock[0].length
@@ -144,7 +143,7 @@ export default class Sheet {
     this._sendSourceUpdate(affectedCells)
   }
 
-  deleteCols(pos, count) {
+  deleteCols (pos, count) {
     if (count === 0) return
     let affectedCells = new Set()
     transformCells(this.engine, this.cells, 1, pos, -count, affectedCells)
@@ -153,14 +152,14 @@ export default class Sheet {
     this.columns.splice(pos, count)
     for (var i = 0; i < N; i++) {
       let row = this.cells[i]
-      block.push(row.slice(pos, pos+count))
+      block.push(row.slice(pos, pos + count))
       row.splice(pos, count)
     }
     this._unregisterCells(block)
     this._sendSourceUpdate(affectedCells)
   }
 
-  rename(newName) {
+  rename (newName) {
     if (newName === this.name) return
     let cells = this.cells
     let affectedCells = new Set()
@@ -182,46 +181,46 @@ export default class Sheet {
   onCellRegister(cell) { // eslint-disable-line
   }
 
-  _getCellSymbol(rowIdx, colIdx) {
+  _getCellSymbol (rowIdx, colIdx) {
     return `${this.id}!${getCellLabel(rowIdx, colIdx)}`
   }
 
-  _createCell(cellData) {
+  _createCell (cellData) {
     // simple format: just the expression
     if (isString(cellData)) {
       let source = cellData
       cellData = {
         id: uuid(),
         docId: this.id,
-        source,
+        source
       }
     }
     let cell = new SheetCell(this, cellData)
     return cell
   }
 
-  _registerCell(cell) {
+  _registerCell (cell) {
     const engine = this.engine
     engine._registerCell(cell)
     this.onCellRegister(cell)
   }
 
-  _unregisterCell(cell) {
+  _unregisterCell (cell) {
     const engine = this.engine
     engine._unregisterCell(cell)
   }
 
-  _registerCells(block) {
+  _registerCells (block) {
     if (!block) block = this.cells
     block.forEach(row => row.forEach(cell => this._registerCell(cell)))
   }
 
-  _unregisterCells(block) {
+  _unregisterCells (block) {
     if (!block) block = this.cells
     block.forEach(row => row.forEach(cell => this._unregisterCell(cell)))
   }
 
-  _removeDep(s) {
+  _removeDep (s) {
     const cells = this.cells
     for (let i = s.startRow; i <= s.endRow; i++) {
       let row = cells[i]
@@ -232,7 +231,7 @@ export default class Sheet {
     }
   }
 
-  _addDep(s) {
+  _addDep (s) {
     const cells = this.cells
     for (let i = s.startRow; i <= s.endRow; i++) {
       let row = cells[i]
@@ -243,14 +242,14 @@ export default class Sheet {
     }
   }
 
-  _sendSourceUpdate(cells) {
+  _sendSourceUpdate (cells) {
     if (cells.size > 0) {
       this.engine._sendUpdate('source', cells)
     }
   }
 }
 
-function transformCells(engine, cells, dim, pos, count, affected) {
+function transformCells (engine, cells, dim, pos, count, affected) {
   if (count === 0) return
   // track updates for symbols and affected cells
   let startRow = 0
@@ -285,7 +284,7 @@ function transformCells(engine, cells, dim, pos, count, affected) {
 
 // some symbols are spanning the insert position, and thus need to
 // be added to the deps of inserted cells
-function _computeSpans(cells, dim, pos) {
+function _computeSpans (cells, dim, pos) {
   let spans
   if (pos > 0) {
     if (cells.length === 0 || cells[0].length === 0) return

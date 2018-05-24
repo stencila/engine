@@ -3,17 +3,17 @@ import CellGraph from './CellGraph'
 import { getRangeFromMatrix } from './engineHelpers'
 
 export default class EngineCellGraph extends CellGraph {
-  constructor(engine) {
+  constructor (engine) {
     super()
 
     this._engine = engine
   }
 
-  _getDoc(s) {
+  _getDoc (s) {
     return this._engine._docs[s.docId]
   }
 
-  _setInputs(cell, newInputs) {
+  _setInputs (cell, newInputs) {
     let oldInputs = cell.inputs
     super._setInputs(cell, newInputs)
     oldInputs.forEach(s => {
@@ -34,8 +34,8 @@ export default class EngineCellGraph extends CellGraph {
     })
   }
 
-  _resolve(s) {
-    switch(s.type) {
+  _resolve (s) {
+    switch (s.type) {
       case 'cell': {
         let sheet = this._getDoc(s)
         if (sheet) {
@@ -60,7 +60,7 @@ export default class EngineCellGraph extends CellGraph {
     }
   }
 
-  _getAffected(cell) {
+  _getAffected (cell) {
     if (cell.isSheetCell()) {
       let affected = []
       cell.deps.forEach(s => affected.push(s.cell.id))

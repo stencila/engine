@@ -1,10 +1,10 @@
 export class CellError extends Error {
-  constructor(msg, details) {
+  constructor (msg, details) {
     super(msg)
     this.details = details
   }
 
-  static cast(err) {
+  static cast (err) {
     if (err instanceof CellError) {
       return err
     } else {
@@ -14,40 +14,40 @@ export class CellError extends Error {
 }
 
 export class ContextError extends CellError {
-  get type() { return 'engine' }
-  get name() { return 'context' }
+  get type () { return 'engine' }
+  get name () { return 'context' }
 }
 
 export class GraphError extends CellError {
-  get type() { return 'graph' }
+  get type () { return 'graph' }
 }
 
 export class SyntaxError extends CellError {
-  get type() { return 'engine' }
-  get name() { return 'syntax' }
+  get type () { return 'engine' }
+  get name () { return 'syntax' }
 }
 
 export class UnresolvedInputError extends GraphError {
-  get name() { return 'unresolved' }
+  get name () { return 'unresolved' }
 }
 
 export class CyclicDependencyError extends GraphError {
-  get trace() {
+  get trace () {
     return this.details.trace
   }
-  get name() { return 'cyclic'}
+  get name () { return 'cyclic' }
 }
 
 export class OutputCollisionError extends GraphError {
-  get name() { return 'collision'}
+  get name () { return 'collision' }
 }
 
 export class RuntimeError extends CellError {
-  get type() { return 'runtime' }
-  get name() { return 'runtime' }
+  get type () { return 'runtime' }
+  get name () { return 'runtime' }
 }
 
 export class ValidationError extends CellError {
-  get type() { return 'runtime' }
-  get name() { return 'validation' }
+  get type () { return 'runtime' }
+  get name () { return 'validation' }
 }

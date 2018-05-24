@@ -11,13 +11,12 @@ import { getIndexesFromRange, qualifiedId } from './engineHelpers'
  *
  */
 export default class CellSymbol {
-
   /*
    * @param {Symbol} s the parsed symbol
    * @param {string} docId id of the target document where the symbol can be resolved
    * @param {Cell} cell the owner cell which has this symbol as an input dependency
    */
-  constructor({ type, scope, name, text, mangledStr, startPos, endPos}, targetDocId, cell) {
+  constructor ({ type, scope, name, text, mangledStr, startPos, endPos }, targetDocId, cell) {
     this.type = type
     this.scope = scope
     this.name = name
@@ -48,7 +47,7 @@ export default class CellSymbol {
     }
   }
 
-  toString() {
+  toString () {
     return this.id
   }
 }

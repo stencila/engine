@@ -6,8 +6,7 @@ import Cell from './Cell'
   Engine's internal model of a Document.
 */
 export default class Document {
-
-  constructor(engine, data) {
+  constructor (engine, data) {
     this.engine = engine
     this.data = data
     if (!data.id) throw new Error("'id' is required")
@@ -25,37 +24,37 @@ export default class Document {
     if (data.onCellRegister) this.onCellRegister = data.onCellRegister
   }
 
-  get type() { return 'document' }
+  get type () { return 'document' }
 
-  getCells() {
+  getCells () {
     return this.cells
   }
 
-  setAutorun(val) {
+  setAutorun (val) {
     this.autorun = val
   }
 
-  insertCellAt(pos, cellData) {
+  insertCellAt (pos, cellData) {
     let cell = this._createCell(cellData)
     this._registerCell(cell)
     this.cells.splice(pos, 0, cell)
     return cell
   }
 
-  removeCell(id) {
+  removeCell (id) {
     const qualifiedId = _qualifiedId(this.id, id)
     const cells = this.cells
     let pos = cells.findIndex(cell => cell.id === qualifiedId)
     if (pos >= 0) {
       let cell = cells[pos]
-      this.cells.splice(pos,1)
+      this.cells.splice(pos, 1)
       this.engine._unregisterCell(cell)
     } else {
       console.error('Unknown cell', id)
     }
   }
 
-  updateCell(id, cellData) {
+  updateCell (id, cellData) {
     let qualifiedId = _qualifiedId(this.id, id)
     if (isString(cellData)) {
       cellData = { source: cellData }
@@ -63,7 +62,7 @@ export default class Document {
     this.engine._updateCell(qualifiedId, cellData)
   }
 
-  rename(newName) {
+  rename (newName) {
     if (newName === this.name) return
     const docId = this.id
     let graph = this.engine._graph
@@ -94,7 +93,7 @@ export default class Document {
   onCellRegister(cell) { // eslint-disable-line
   }
 
-  _createCell(cellData) {
+  _createCell (cellData) {
     if (isString(cellData)) {
       let source = cellData
       cellData = {
@@ -107,18 +106,18 @@ export default class Document {
     return new Cell(this, cellData)
   }
 
-  _registerCell(cell) {
+  _registerCell (cell) {
     const engine = this.engine
     engine._registerCell(cell)
     this.onCellRegister(cell)
   }
 
-  _registerCells(block) {
+  _registerCells (block) {
     if (!block) block = this.cells
     block.forEach(cell => this._registerCell(cell))
   }
 
-  _sendSourceUpdate(cells) {
+  _sendSourceUpdate (cells) {
     if (cells.size > 0) {
       this.engine._sendUpdate('source', cells)
     }

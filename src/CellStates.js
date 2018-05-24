@@ -18,7 +18,7 @@ const RUNNING = Symbol('RUNNING')
 // evaluation succeeded
 const OK = Symbol('OK')
 
-function toInteger(state) {
+function toInteger (state) {
   switch (state) {
     case UNKNOWN: return -2
     case ANALYSED: return -1
@@ -34,7 +34,7 @@ function toInteger(state) {
   }
 }
 
-function toString(state) {
+function toString (state) {
   switch (state) {
     case UNKNOWN: return 'unknown'
     case ANALYSED: return 'analysed'

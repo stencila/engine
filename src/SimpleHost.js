@@ -25,7 +25,7 @@ export default class SimpleHost {
     return this._contexts[lang]
   }
 
-  getFunctionManager() {
+  getFunctionManager () {
     return this._functionManager
   }
 }

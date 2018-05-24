@@ -116,8 +116,8 @@ export function unpack (pkg) {
 /*
   A helper to gather values of a composite value (object, array, range)
 */
-export function gather(type, value) {
-  switch(type) {
+export function gather (type, value) {
+  switch (type) {
     case 'array': {
       return {
         type: coercedArrayType(value),

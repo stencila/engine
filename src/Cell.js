@@ -3,8 +3,7 @@ import { UNKNOWN, toString as cellStatusToString } from './CellStates'
 import { transpile, isExpression, qualifiedId } from './engineHelpers'
 
 export default class Cell {
-
-  constructor(doc, cellData) {
+  constructor (doc, cellData) {
     const { id, lang, source, status, inputs, output, value, errors, hasSideEffects, next, prev } = cellData
     this.doc = doc
 
@@ -19,7 +18,7 @@ export default class Cell {
         this.id = id
         // ATTENTION: assuming that the qualified id is joining
         // the doc id and the node id with a single character (e.g. '!')
-        this.unqualifiedId = id.slice(docId.length+1)
+        this.unqualifiedId = id.slice(docId.length + 1)
       } else {
         this.id = qualifiedId(doc, cellData)
         this.unqualifiedId = id
@@ -61,7 +60,7 @@ export default class Cell {
     this.stats = {}
   }
 
-  clearErrors(filter) {
+  clearErrors (filter) {
     if (isString(filter)) {
       const type = filter
       filter = (e) => {
@@ -71,67 +70,67 @@ export default class Cell {
     this.errors = this.errors.filter(e => !filter(e))
   }
 
-  addErrors(errors) {
+  addErrors (errors) {
     this.errors = this.errors.concat(errors)
   }
 
-  hasErrors() {
+  hasErrors () {
     return this.errors.length > 0
   }
 
-  hasError(type) {
+  hasError (type) {
     for (let i = 0; i < this.errors.length; i++) {
       if (this.errors[i].type === type) return true
     }
     return false
   }
 
-  get state() {
+  get state () {
     console.warn('DEPRECATED: use cellState.status instead.')
     return this.status
   }
 
-  hasOutput() {
+  hasOutput () {
     return Boolean(this.output)
   }
 
-  hasValue() {
+  hasValue () {
     return Boolean(this.value)
   }
 
-  getValue() {
+  getValue () {
     return this.value
   }
 
-  getLang() {
+  getLang () {
     return this.lang || (this.doc ? this.doc.lang : 'mini')
   }
 
-  get source() {
+  get source () {
     return this._source.original
   }
 
-  set source(source) {
+  set source (source) {
     this._source = this._transpile(source)
   }
 
-  get transpiledSource() {
+  get transpiledSource () {
     return this._source.transpiled
   }
 
-  get symbolMapping() {
+  get symbolMapping () {
     return this._source.symbolMapping
   }
 
-  isConstant() {
+  isConstant () {
     return this._source.isConstant
   }
 
-  isSheetCell() {
+  isSheetCell () {
     return false
   }
 
-  toString() {
+  toString () {
     // sheet1!A1 <- { ... source }
     let parts = []
     if (this.output) {
@@ -145,11 +144,11 @@ export default class Cell {
     return parts.join('')
   }
 
-  _getStatusString() {
+  _getStatusString () {
     return cellStatusToString(this.status)
   }
 
-  _transpile(source) {
+  _transpile (source) {
     let original = source
     let transpiled
     let symbolMapping = {}

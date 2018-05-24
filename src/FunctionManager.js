@@ -17,7 +17,7 @@ export default class FunctionManager {
     }
   }
 
-  getContextLibrary(functionName) {
+  getContextLibrary (functionName) {
     return this.functionMap[functionName]
   }
 

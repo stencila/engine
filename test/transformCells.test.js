@@ -293,7 +293,7 @@ test('transformCell: range / row / delete after', (t) => {
   t.end()
 })
 
-function _createCell(source) {
+function _createCell (source) {
   let cell = new Cell(null, {source})
   // Note: faking code analysis usually done by Engine
   forEach(cell._source.symbolMapping, s => {
@@ -302,7 +302,7 @@ function _createCell(source) {
   return cell
 }
 
-function _transformCell(cell, dim, pos, count) {
+function _transformCell (cell, dim, pos, count) {
   recordTransformations({ deps: cell.inputs }, dim === 'row' ? 0 : 1, pos, count)
   applyCellTransformations(cell)
 }

@@ -24,7 +24,6 @@ test('CellGraph: single cell with no deps', t => {
   t.end()
 })
 
-
 /*
   add two cells, first providing 'x', second consuming 'x',
   first should be ready right away,
@@ -33,7 +32,7 @@ test('CellGraph: single cell with no deps', t => {
 test('CellGraph: two linked cells', t => {
   let g = new CellGraph()
   let cells = [
-    new Cell(null, { id: 'cell1', output: 'x', status: ANALYSED}),
+    new Cell(null, { id: 'cell1', output: 'x', status: ANALYSED }),
     new Cell(null, { id: 'cell2', inputs: ['x'], status: ANALYSED })
   ]
   cells.forEach(c => g.addCell(c))
@@ -65,7 +64,7 @@ test('CellGraph: Y shaped graph', t => {
     new Cell(null, { id: 'cell1', output: 'x', status: ANALYSED }),
     new Cell(null, { id: 'cell2', output: 'y', status: ANALYSED }),
     new Cell(null, { id: 'cell3', inputs: ['x', 'y'], output: 'z', status: ANALYSED }),
-    new Cell(null, { id: 'cell4', inputs: ['z'], status: ANALYSED }),
+    new Cell(null, { id: 'cell4', inputs: ['z'], status: ANALYSED })
   ]
   cells.forEach(c => g.addCell(c))
 
@@ -107,7 +106,7 @@ test('CellGraph: Diamond', t => {
     new Cell(null, { id: 'cell1', output: 'x', status: ANALYSED }),
     new Cell(null, { id: 'cell2', inputs: ['x'], output: 'y', status: ANALYSED }),
     new Cell(null, { id: 'cell3', inputs: ['x'], output: 'z', status: ANALYSED }),
-    new Cell(null, { id: 'cell4', inputs: ['y', 'z'], status: ANALYSED }),
+    new Cell(null, { id: 'cell4', inputs: ['y', 'z'], status: ANALYSED })
   ]
   cells.forEach(c => g.addCell(c))
 
@@ -168,7 +167,7 @@ test('CellGraph: missing link', t => {
 test('CellGraph: unresolvable input', t => {
   let g = new CellGraph()
   let cells = [
-    new Cell(null, { id: 'cell1', inputs: ['y'], output: 'x', status: ANALYSED }),
+    new Cell(null, { id: 'cell1', inputs: ['y'], output: 'x', status: ANALYSED })
   ]
   cells.forEach(c => g.addCell(c))
 
@@ -192,7 +191,7 @@ test('CellGraph: blocked cell', t => {
   let cells = [
     new Cell(null, { id: 'cell1', output: 'x', status: ANALYSED }),
     new Cell(null, { id: 'cell2', inputs: ['x'], output: 'y', status: ANALYSED }),
-    new Cell(null, { id: 'cell3', inputs: ['y'], status: ANALYSED }),
+    new Cell(null, { id: 'cell3', inputs: ['y'], status: ANALYSED })
   ]
   cells.forEach(c => g.addCell(c))
 
@@ -227,7 +226,7 @@ test('CellGraph: failed evaluation', t => {
   let cells = [
     new Cell(null, { id: 'cell1', output: 'x', status: ANALYSED }),
     new Cell(null, { id: 'cell2', inputs: ['x'], output: 'y', status: ANALYSED }),
-    new Cell(null, { id: 'cell3', inputs: ['y'], status: ANALYSED }),
+    new Cell(null, { id: 'cell3', inputs: ['y'], status: ANALYSED })
   ]
   cells.forEach(c => g.addCell(c))
 
@@ -251,7 +250,7 @@ test('CellGraph: changing inputs', t => {
   let cells = [
     new Cell(null, { id: 'cell1', output: 'x', status: ANALYSED }),
     new Cell(null, { id: 'cell2', output: 'y', status: ANALYSED }),
-    new Cell(null, { id: 'cell3', inputs: ['z'], status: ANALYSED }),
+    new Cell(null, { id: 'cell3', inputs: ['z'], status: ANALYSED })
   ]
   cells.forEach(c => g.addCell(c))
 
@@ -325,7 +324,7 @@ test('CellGraph: cycle', t => {
   let cells = [
     new Cell(null, { id: 'cell1', output: 'x1', status: ANALYSED }),
     new Cell(null, { id: 'cell2', inputs: ['x1', 'x4'], output: 'x2', status: ANALYSED }),
-    new Cell(null, { id: 'cell3', inputs: ['x2'], output: 'x3', status: ANALYSED }),
+    new Cell(null, { id: 'cell3', inputs: ['x2'], output: 'x3', status: ANALYSED })
   ]
   cells.forEach(c => g.addCell(c))
 
@@ -351,7 +350,7 @@ test('CellGraph: resolving a cycle', t => {
   let g = new CellGraph()
   let cells = [
     new Cell(null, { id: 'cell1', inputs: ['y'], output: 'x', status: ANALYSED }),
-    new Cell(null, { id: 'cell2', inputs: ['x'], output: 'y', status: ANALYSED }),
+    new Cell(null, { id: 'cell2', inputs: ['x'], output: 'y', status: ANALYSED })
   ]
   cells.forEach(c => g.addCell(c))
 
@@ -377,7 +376,7 @@ test('CellGraph: name collision', t => {
     new Cell(null, { id: 'cell1', output: 'x', status: ANALYSED }),
     new Cell(null, { id: 'cell2', output: 'x', status: ANALYSED }),
     new Cell(null, { id: 'cell3', output: 'x', status: ANALYSED }),
-    new Cell(null, { id: 'cell4', inputs: ['x'], status: ANALYSED }),
+    new Cell(null, { id: 'cell4', inputs: ['x'], status: ANALYSED })
   ]
   cells.forEach(c => g.addCell(c))
 
@@ -513,7 +512,7 @@ test('CellGraph: removing a cell from a notebook', t => {
 test('CellGraph: adding an engine error should imply BROKEN state', t => {
   let g = new CellGraph()
   let cells = [
-    new Cell(null, { id: 'cell1'}),
+    new Cell(null, { id: 'cell1' })
   ]
   cells.forEach(c => g.addCell(c))
 
@@ -532,7 +531,7 @@ test('CellGraph: adding an engine error should imply BROKEN state', t => {
 test('CellGraph: remove a cell', t => {
   let g = new CellGraph()
   let cells = [
-    new Cell(null, { id: 'cell1', output: 'x', status: ANALYSED}),
+    new Cell(null, { id: 'cell1', output: 'x', status: ANALYSED }),
     new Cell(null, { id: 'cell2', inputs: ['x'], output: 'y', status: ANALYSED }),
     new Cell(null, { id: 'cell3', inputs: ['y'], status: ANALYSED })
   ]
@@ -560,7 +559,7 @@ test('CellGraph: remove a cell', t => {
 test('CellGraph: cells with side-effects', t => {
   let g = new CellGraph()
   let cells = [
-    new Cell(null, { id: 'cell1', output: 'x', status: ANALYSED}),
+    new Cell(null, { id: 'cell1', output: 'x', status: ANALYSED }),
     new Cell(null, { id: 'cell2', inputs: ['x'], output: 'y', status: ANALYSED }),
     new Cell(null, { id: 'cell3', inputs: ['y'], status: ANALYSED })
   ]
@@ -607,13 +606,13 @@ test('CellGraph: TEMPLATE', t => {
 })
 */
 
-function _checkStates(t, cells, expected) {
+function _checkStates (t, cells, expected) {
   expected = expected.map(toString)
   let actual = cells.map(cell => toString(cell.status))
   t.deepEqual(actual, expected, 'cell states should be correct')
 }
 
-function _checkUpdates(t, updates, expected) {
+function _checkUpdates (t, updates, expected) {
   let actual = Array.from(updates)
   actual.sort()
   t.deepEqual(actual, expected, `${expected.join(', ')} should have been updated`)

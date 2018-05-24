@@ -9,8 +9,7 @@ import Context from './Context'
  * @extends Context
  */
 export default class ContextHttpClient extends Context {
-
-  constructor(host, url, name) {
+  constructor (host, url, name) {
     super()
     this._host = host
     this._peer = url
@@ -43,7 +42,7 @@ export default class ContextHttpClient extends Context {
         inputs: post.inputs && post.inputs.map(input => input.name),
         output: post.outputs && post.outputs[0] && post.outputs[0].name,
         messages: post.messages
-      }      
+      }
     })
   }
 
@@ -87,7 +86,8 @@ export default class ContextHttpClient extends Context {
     let call = {
       type: 'call',
       func: {type: 'get', name: name},
-      args, namedArgs
+      args,
+      namedArgs
     }
     return this._host._put(this._peer, '/' + this._name + '!evaluate', call)
   }
