@@ -1,3 +1,7 @@
 export { default as CellGraph } from './CellGraph'
 export { default as Engine } from './Engine'
+export { default as MiniContext } from './MiniContext'
+export { default as JsContext } from './JsContext'
 export * from './engineHelpers'
+export { default as importFromJson } from './importFromJson'
+export { default as setupHost } from './setupHost'

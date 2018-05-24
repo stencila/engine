@@ -23,6 +23,19 @@ b.task('lib:browser', () => {
   })
 })
 
+b.task('lib:node', () => {
+  b.js('index.es.js', {
+    output: [{
+      file: DIST + 'engine.cjs.js',
+      format: 'cjs'
+    }],
+    commonjs: {
+      namedExports: { 'acorn/dist/walk.js': [ 'simple', 'base' ] }
+    },
+    json: true
+  })
+})
+
 b.task('test:browser', () => {
   b.js('test/**/*.test.js', {
     output: [{

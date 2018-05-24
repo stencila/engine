@@ -93,6 +93,18 @@ export default class Document {
   onCellRegister(cell) { // eslint-disable-line
   }
 
+  dump () {
+    let cells = this.cells.map(cell => cell.dump())
+    return {
+      type: 'document',
+      id: this.id,
+      name: this.name,
+      lang: this.lang,
+      autorun: this.autorun,
+      cells
+    }
+  }
+
   _createCell (cellData) {
     if (isString(cellData)) {
       let source = cellData

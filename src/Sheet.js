@@ -1,4 +1,4 @@
-import { uuid, isString } from 'substance'
+import { uuid, isString, clone } from 'substance'
 import {
   recordTransformations, applyCellTransformations, getCellLabel, getColumnLabel,
   qualifiedId as _qualifiedId
@@ -179,6 +179,20 @@ export default class Sheet {
   }
 
   onCellRegister(cell) { // eslint-disable-line
+  }
+
+  dump () {
+    let columns = this.columns.map(c => clone(c))
+    let cells = this.cells.map(row => row.map(cell => cell.dump()))
+    return {
+      type: 'sheet',
+      id: this.id,
+      name: this.name,
+      lang: this.lang,
+      autorun: this.autorun,
+      columns,
+      cells
+    }
   }
 
   _getCellSymbol (rowIdx, colIdx) {

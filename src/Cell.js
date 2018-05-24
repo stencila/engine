@@ -144,6 +144,24 @@ export default class Cell {
     return parts.join('')
   }
 
+  dump () {
+    // TODO: to be able to start off from a loaded dump
+    // we would need to store more information, such as 'level' etc
+    // let inputs = Array.from(this.inputs).map(s => s.dump())
+    // let output
+    // if (this.output) output = this.output.dump()
+    return {
+      id: this.unqualifiedId,
+      lang: this.lang,
+      source: this._source.original,
+      status: cellStatusToString(this.status),
+      // inputs,
+      // output,
+      errors: this.errors,
+      value: this.value
+    }
+  }
+
   _getStatusString () {
     return cellStatusToString(this.status)
   }

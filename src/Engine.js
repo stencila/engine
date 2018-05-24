@@ -1,4 +1,4 @@
-import { isString, EventEmitter, flatten } from 'substance'
+import { isString, EventEmitter, flatten, forEach } from 'substance'
 import { ContextError, RuntimeError, SyntaxError } from './CellErrors'
 import { UNKNOWN, ANALYSED, READY, toInteger as statusToInt } from './CellStates'
 import CellSymbol from './CellSymbol'
@@ -121,7 +121,37 @@ export default class Engine extends EventEmitter {
     this._host = host
   }
 
-  run /* istanbul ignore next */ (interval) {
+  runOnce () {
+    const self = this
+    return new Promise(resolve => {
+      function step () {
+        if (self._needsUpdate()) {
+          self._runCycle().then(step)
+        } else {
+          resolve()
+        }
+      }
+      step()
+    })
+  }
+
+  _runCycle () {
+    return Promise.all(this.cycle())
+  }
+
+  _needsUpdate () {
+    const graph = this._graph
+    if (graph.needsUpdate()) return true
+    const nextActions = this._nextActions
+    if (nextActions.size === 0) return false
+    // update is required if there is an action that has not been suspended
+    for (let [, a] of nextActions) {
+      if (!a.suspended) return true
+    }
+    return false
+  }
+
+  runForEver (refreshInterval) {
     if (!this._host) throw new Error('Must call setHost() before starting the Engine')
 
     // TODO: does this only work in the browser?
@@ -132,7 +162,11 @@ export default class Engine extends EventEmitter {
       if (this.needsUpdate()) {
         this.cycle()
       }
-    }, interval)
+    }, refreshInterval)
+  }
+
+  run (interval) {
+    this.runForEver(interval)
   }
 
   /*
@@ -154,6 +188,16 @@ export default class Engine extends EventEmitter {
     let sheet = new Sheet(this, data)
     this._registerResource(sheet)
     return sheet
+  }
+
+  dump () {
+    let resources = []
+    forEach(this._docs, (doc, id) => {
+      resources.push(doc.dump())
+    })
+    return {
+      resources
+    }
   }
 
   hasResource (id) {
