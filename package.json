@@ -1,0 +1,32 @@
+{
+  "name": "stencila-engine",
+  "version": "0.1.0",
+  "description": "The Execution Engine \u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5C\u001b[1;5C\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[ for Stencila Cells.",
+  "main": "index.es.js",
+  "directories": {
+    "test": "tests"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "acorn": "5.5.3",
+    "astring": "1.3.0",
+    "stencila-libcore": "0.2.13",
+    "stencila-mini": "0.14.2",
+    "substance": "1.0.0-preview.63",
+    "substance-bundler": "0.24.3",
+    "substance-test": "0.11.0"
+  },
+  "scripts": {
+    "test": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stencila/engine.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/stencila/engine/issues"
+  },
+  "homepage": "https://github.com/stencila/engine#readme"
+}
