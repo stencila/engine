@@ -10,16 +10,18 @@
   "devDependencies": {
     "acorn": "5.5.3",
     "astring": "1.3.0",
+    "esm": "^3.0.37",
     "standard": "^11.0.1",
-    "stencila-libcore": "0.2.13",
     "stencila-mini": "0.14.2",
     "substance": "1.0.0-preview.63",
     "substance-bundler": "0.24.3",
-    "substance-test": "0.11.0"
+    "substance-test": "0.11.0",
+    "tap-spec": "^4.1.1",
+    "tape": "^4.9.0"
   },
   "scripts": {
     "lint": "standard src/**/*.js test/**/*.js",
-    "test": "npm test"
+    "test": "node --require esm test | tap-spec"
   },
   "repository": {
     "type": "git",

@@ -24,7 +24,7 @@ b.task('lib:browser', () => {
 })
 
 b.task('test:browser', () => {
-  b.js('tests/**/*.test.js', {
+  b.js('test/**/*.test.js', {
     output: [{
       file: 'tmp/tests.js',
       format: 'umd',

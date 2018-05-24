@@ -5,8 +5,6 @@ import { isFunction, isNil } from 'substance'
 
 import Context from './Context'
 
-import libcore from 'stencila-libcore'
-
 /**
  * A Javascript context
  *
@@ -15,7 +13,6 @@ import libcore from 'stencila-libcore'
  * @extends Context
  */
 export default class JsContext extends Context {
-
   constructor () {
     super()
 
@@ -24,18 +21,16 @@ export default class JsContext extends Context {
       // A list of ES6 globals obtained using:
       //   const globals = require('globals')
       //   JSON.stringify(Object.keys(globals.es6))
-      "Array","ArrayBuffer","Boolean","constructor","DataView","Date","decodeURI","decodeURIComponent",
-      "encodeURI","encodeURIComponent","Error","escape","eval","EvalError","Float32Array","Float64Array",
-      "Function","hasOwnProperty","Infinity","Int16Array","Int32Array","Int8Array","isFinite","isNaN",
-      "isPrototypeOf","JSON","Map","Math","NaN","Number","Object","parseFloat","parseInt","Promise",
-      "propertyIsEnumerable","Proxy","RangeError","ReferenceError","Reflect","RegExp","Set","String",
-      "Symbol","SyntaxError","System","toLocaleString","toString","TypeError","Uint16Array","Uint32Array",
-      "Uint8Array","Uint8ClampedArray","undefined","unescape","URIError","valueOf","WeakMap","WeakSet"
+      'Array', 'ArrayBuffer', 'Boolean', 'constructor', 'DataView', 'Date', 'decodeURI', 'decodeURIComponent',
+      'encodeURI', 'encodeURIComponent', 'Error', 'escape', 'eval', 'EvalError', 'Float32Array', 'Float64Array',
+      'Function', 'hasOwnProperty', 'Infinity', 'Int16Array', 'Int32Array', 'Int8Array', 'isFinite', 'isNaN',
+      'isPrototypeOf', 'JSON', 'Map', 'Math', 'NaN', 'Number', 'Object', 'parseFloat', 'parseInt', 'Promise',
+      'propertyIsEnumerable', 'Proxy', 'RangeError', 'ReferenceError', 'Reflect', 'RegExp', 'Set', 'String',
+      'Symbol', 'SyntaxError', 'System', 'toLocaleString', 'toString', 'TypeError', 'Uint16Array', 'Uint32Array',
+      'Uint8Array', 'Uint8ClampedArray', 'undefined', 'unescape', 'URIError', 'valueOf', 'WeakMap', 'WeakSet'
     ]
 
-    this._libs = {
-      core: libcore
-    }
+    this._libs = {}
   }
 
   /**
@@ -50,7 +45,7 @@ export default class JsContext extends Context {
   }
 
   /**
-   * Analyse code and return the names of inputs, output and
+   * Analyse code and return the names of inputs,  output and
    * implicitly returned value expression
    *
    * @override
@@ -87,7 +82,7 @@ export default class JsContext extends Context {
         }
         fail = !simpleExpr
       }
-      if (fail) messages.push(this._packError(new Error ('Code is not a single, simple expression')))
+      if (fail) messages.push(this._packError(new Error('Code is not a single, simple expression')))
     }
 
     if (messages.length === 0) {
@@ -111,7 +106,7 @@ export default class JsContext extends Context {
           output = last.declarations[0].id.name
           value = output
         } else if (last.type === 'ExpressionStatement') {
-          if(last.expression.type === 'Identifier') {
+          if (last.expression.type === 'Identifier') {
             output = last.expression.name
           }
           value = generate(last)
@@ -157,10 +152,9 @@ export default class JsContext extends Context {
               line: 0,
               column: 0,
               type: 'warn',
-              message: `Input variable "${name}" is not managed`
+              message: `Input variable '${name}' is not managed`
             })
-          }
-          else {
+          } else {
             argNames.push(name)
             argValues.push(this._unpackValue(value))
           }
@@ -212,11 +206,11 @@ export default class JsContext extends Context {
     })
   }
 
-  libraries() {
+  libraries () {
     return Promise.resolve(this._libs)
   }
 
-  importLibrary(library) {
+  importLibrary (library) {
     this._libs[library.name] = library
   }
 
@@ -240,7 +234,7 @@ export default class JsContext extends Context {
    * @override
    */
   callFunction (libName, functionName, args = []) {
-    if (!functionName) throw new Error("'name' is mandatory")
+    if (!functionName) throw new Error('name is mandatory')
 
     const lib = this._libs[libName]
     if (!lib) throw new Error('No library registered with name: ' + libName)
@@ -270,7 +264,7 @@ export default class JsContext extends Context {
   /**
    * Unpack a value passed from the `Engine` or another `Context`
    */
-  _unpackValue(packed) {
+  _unpackValue (packed) {
     return packed ? packed.data : null
   }
 
@@ -324,5 +318,4 @@ export default class JsContext extends Context {
       message: message
     }
   }
-
 }
