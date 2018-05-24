@@ -1,4 +1,5 @@
 import { isNumber, isString } from 'substance'
+import { type, gather } from './value'
 
 export const BROKEN_REF = '#BROKEN_REF'
 
@@ -39,7 +40,7 @@ const INVALID_ID_CHARACTERS = '[^A-Za-z0-9]'
 /*
   A reference can point to a variable, a cell, or a range inside the same document
   or another one. To avoid matches inside of other symbols, '\b' (word boundary) is used in the expression.
-  `[']` can not be used in combination with '\b'.
+  `[']` can not be used in combination with '\b'.get
 
   ```
    ( ( \b ID | ['].+['] )[!] | \b)( CELL_ID([:]CELL_ID)? | ID )
@@ -285,6 +286,10 @@ export function transformRange (start, end, pos, count) {
   return { start, end }
 }
 
+export function isExpression (source) {
+  return /^\s*=/.exec(source)
+}
+
 export function getCellSymbolName (s) {
   let newName = getCellLabel(s.startRow, s.startCol)
   if (s.type === 'range') {
@@ -310,8 +315,95 @@ export function getColumnLabel (colIdx) {
   return label
 }
 
+export function getRowCol (cellLabel) {
+  var match = /^([A-Z]+)([1-9][0-9]*)$/.exec(cellLabel)
+  return [
+    parseInt(match[2], 10) - 1,
+    getColumnIndex(match[1])
+  ]
+}
+
+export function getColumnIndex (colStr) {
+  let index = 0
+  let rank = 1
+  for (let i = 0; i < colStr.length; i++) {
+    let letter = colStr[i]
+    index += rank * ALPHABET.indexOf(letter)
+    rank++
+  }
+  return index
+}
+
 export function getCellLabel (rowIdx, colIdx) {
   let colLabel = getColumnLabel(colIdx)
   let rowLabel = rowIdx + 1
   return colLabel + rowLabel
 }
+
+export function getIndexesFromRange (start, end) {
+  let [startRow, startCol] = getRowCol(start)
+  let endRow, endCol
+  if (end) {
+    ([endRow, endCol] = getRowCol(end))
+    if (startRow > endRow) ([startRow, endRow] = [endRow, startRow])
+    if (startCol > endCol) ([startCol, endCol] = [endCol, startCol])
+  } else {
+    ([endRow, endCol] = [startRow, startCol])
+  }
+  return { startRow, startCol, endRow, endCol }
+}
+
+export function getRangeFromMatrix (cells, startRow, startCol, endRow, endCol, force2D) {
+  if (!force2D) {
+    if (startRow === endRow && startCol === endCol) {
+      let row = cells[startCol]
+      if (row) return row[endCol]
+      else return undefined
+    }
+    if (startRow === endRow) {
+      let row = cells[startRow]
+      if (row) return row.slice(startCol, endCol + 1)
+      else return []
+    }
+    if (startCol === endCol) {
+      let res = []
+      for (let i = startRow; i <= endRow; i++) {
+        let row = cells[i]
+        if (row) res.push(row[startCol])
+      }
+      return res
+    }
+  }
+  let res = []
+  for (var i = startRow; i < endRow + 1; i++) {
+    let row = cells[i]
+    if (row) res.push(row.slice(startCol, endCol + 1))
+  }
+  return res
+}
+
+export function valueFromText (text, preferredType = 'any') {
+  const data = _parseText(preferredType, text)
+  const type_ = type(data)
+  return { type: type_, data }
+}
+
+function _parseText (preferredType, text) {
+  // guess value
+  if (text === 'false') {
+    return false
+  } else if (text === 'true') {
+    return true
+  } else if (!isNaN(text)) {
+    let _int = Number.parseInt(text, 10)
+    if (_int == text) { // eslint-disable-line
+      return _int
+    } else {
+      return Number.parseFloat(text)
+    }
+  } else {
+    return text
+  }
+}
+
+export { gather }

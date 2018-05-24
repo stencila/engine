@@ -1,3 +1,5 @@
+// DEPRECATED: soon we will only have clients
+
 /**
  * Abstract base class for a Stencila execution context
  *

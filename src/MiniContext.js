@@ -1,23 +1,20 @@
 import { parse } from 'stencila-mini'
-import { getCellLabel } from '../shared/cellHelpers'
-import { gather } from '../value'
+import { getCellLabel, gather } from './engineHelpers'
 
 export default class MiniContext {
-
-  constructor(host) {
+  constructor (host) {
     this._host = host
-    this._functionManager = host.functionManager
   }
 
-  supportsLanguage(language) {
+  supportsLanguage (language) {
     return Promise.resolve(language === 'mini')
   }
 
-  analyseCode(code, exprOnly = false) {
+  analyseCode (code, exprOnly = false) {
     return Promise.resolve(this._analyseCode(code, exprOnly))
   }
 
-  executeCode(code = '', inputs = {}, exprOnly = false) {
+  executeCode (code = '', inputs = {}, exprOnly = false) {
     let codeAnalysis = this._analyseCode(code, exprOnly)
     if (codeAnalysis.expr) {
       return this._evaluateExpression(codeAnalysis, inputs)
@@ -31,18 +28,19 @@ export default class MiniContext {
     This gets called when evaluating a function call node within a Mini expression
 
   */
-  callFunction(funcCall) {
+  callFunction (funcCall) {
+    const functionManager = this._host.getFunctionManager()
     // TODO: change the signature of this by doing all mini AST related preparations before-hand
     const functionName = funcCall.name
 
     // Ensure the function exists
-    let funcDoc = this._functionManager.getFunction(functionName)
+    let funcDoc = functionManager.getFunction(functionName)
     if (!funcDoc) {
       return _error(`Could not find function "${functionName}"`)
     }
 
     // Get a context for the implementation language
-    let {context, library} = this._functionManager.getContextLibrary(functionName)
+    let {context, library} = functionManager.getContextLibrary(functionName)
     // Call the function implementation in the context, capturing any
     // messages or returning the value
     let args = funcCall.args.map(arg => arg.getValue())
@@ -58,7 +56,7 @@ export default class MiniContext {
       return res.value
     })
 
-    function _error(msg) {
+    function _error (msg) {
       console.error(msg)
       funcCall.addErrors([{
         type: 'error',
@@ -68,7 +66,7 @@ export default class MiniContext {
     }
   }
 
-  _analyseCode(code) {
+  _analyseCode (code) {
     if (!code) {
       return {
         inputs: [],
@@ -139,7 +137,7 @@ export default class MiniContext {
     }
   }
 
-  _evaluateExpression(res, values) {
+  _evaluateExpression (res, values) {
     let expr = res.expr
     if (expr.syntaxError) {
       return Promise.resolve(res)
@@ -160,7 +158,6 @@ export default class MiniContext {
       expr.propagate()
     })
   }
-
 }
 
 /*
@@ -168,14 +165,13 @@ export default class MiniContext {
   and for marshalling.
 */
 class ExprContext {
-
-  constructor(parentContext, values) {
+  constructor (parentContext, values) {
     this.parentContext = parentContext
     this.values = values
   }
 
-  lookup(symbol) {
-    switch(symbol.type) {
+  lookup (symbol) {
+    switch (symbol.type) {
       case 'var': {
         return this.values[symbol.name]
       }
@@ -198,7 +194,7 @@ class ExprContext {
   // used to create Stencila Values
   // such as { type: 'number', data: 5 }
   // TODO: coerce arrays,
-  marshal(type, value) {
+  marshal (type, value) {
     // TODO: maybe there are more cases where we want to
     // cast the type according to the value
     switch (type) {
@@ -225,7 +221,7 @@ class ExprContext {
     }
   }
 
-  unmarshal(val) {
+  unmarshal (val) {
     // TODO: better understand if it is ok to make this robust
     // by guarding undefined values, and not obfuscating an error occurring elsewhere
     // it happened whenever undefined is returned by a called function
@@ -233,8 +229,7 @@ class ExprContext {
     return val.data
   }
 
-  callFunction(funcCall) {
+  callFunction (funcCall) {
     return this.parentContext.callFunction(funcCall)
   }
-
 }
