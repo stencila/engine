@@ -238,11 +238,7 @@ export default class Engine extends EventEmitter {
       })
       actions.register.forEach(a => {
         let cell = graph.getCell(a.id)
-        if (cell.isSheetCell()) {
-          graph.setInputs(cell.id, a.inputs)
-        } else {
-          graph.setInputsOutputs(cell.id, a.inputs, a.output)
-        }
+        graph.setInputsOutputs(cell.id, a.inputs, a.output)
       })
 
       this._updateGraph()
