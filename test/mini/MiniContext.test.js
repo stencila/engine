@@ -1,8 +1,10 @@
 import test from 'tape'
-import MiniContext from '../../src/contexts/MiniContext'
-import JsContext from '../../src/contexts/JsContext'
+import MiniContext from '../src/MiniContext'
 import FunctionManager from '../../src/function/FunctionManager'
 import { libtest } from './libtest'
+import {
+  setupEngine, testAsync
+} from './testHelpers'
 
 function setupContextWithFunctions() {
   // A JsContext with the test function library
