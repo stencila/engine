@@ -1,8 +1,8 @@
-import { isString, EventEmitter, flatten, forEach } from 'substance'
+import { isString, EventEmitter, flatten, forEach, tableHelpers } from 'substance'
 import { ContextError, RuntimeError, SyntaxError } from './CellErrors'
 import { UNKNOWN, ANALYSED, READY, toInteger as statusToInt } from './CellStates'
 import CellSymbol from './CellSymbol'
-import { gather, valueFromText, getColumnLabel, qualifiedId as _qualifiedId } from './engineHelpers'
+import { gather, valueFromText, qualifiedId as _qualifiedId } from './engineHelpers'
 import EngineCellGraph from './EngineCellGraph'
 import Sheet from './Sheet'
 import Document from './Document'
@@ -238,11 +238,7 @@ export default class Engine extends EventEmitter {
       })
       actions.register.forEach(a => {
         let cell = graph.getCell(a.id)
-        if (cell.isSheetCell()) {
-          graph.setInputs(cell.id, a.inputs)
-        } else {
-          graph.setInputsOutputs(cell.id, a.inputs, a.output)
-        }
+        graph.setInputsOutputs(cell.id, a.inputs, a.output)
       })
 
       this._updateGraph()
@@ -714,7 +710,7 @@ function _getValueForRange (sheet, startRow, startCol, endRow, endCol) {
   } else {
     let data = {}
     for (let j = startCol; j <= endCol; j++) {
-      let name = sheet.getColumnName(j) || getColumnLabel(j)
+      let name = sheet.getColumnName(j) || tableHelpers.getColumnLabel(j)
       let cells = []
       for (let i = startRow; i <= endRow; i++) {
         cells.push(matrix[i][j])

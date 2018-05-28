@@ -1,24 +1,7 @@
-import { isNumber, isString } from 'substance'
+import { isNumber, isString, tableHelpers } from 'substance'
 import { type, gather } from './value'
 
 export const BROKEN_REF = '#BROKEN_REF'
-
-export function getSyntaxTokens (path, tokens) {
-  return tokens ? tokens.map((t) => {
-    return {
-      type: 'code-highlight',
-      name: _getTokenType(t),
-      start: { path, offset: t.start },
-      end: { path, offset: t.end },
-      on () {},
-      off () {}
-    }
-  }) : []
-}
-
-function _getTokenType (t) {
-  return t.type
-}
 
 /*
   Matchers for transclusions and cell references
@@ -36,6 +19,7 @@ const NAME = "[']([^']+)[']"
 const CELL_ID = '([A-Z]+[1-9][0-9]*)'
 // These characters will be replaced. Add more if needed.
 const INVALID_ID_CHARACTERS = '[^A-Za-z0-9]'
+const EXPRESSION_CELL = '^\\s*' + ID + '?\\s*='
 
 /*
   A reference can point to a variable, a cell, or a range inside the same document
@@ -48,6 +32,8 @@ const INVALID_ID_CHARACTERS = '[^A-Za-z0-9]'
 */
 const REF = '(?:(?:(?:(?:\\b' + ID + '|' + NAME + '))[!])|\\b)(?:' + CELL_ID + '(?:[:]' + CELL_ID + ')?|' + ID + ')'
 const REF_RE = new RegExp(REF)
+const EXPRESSION_CELL_RE = new RegExp(EXPRESSION_CELL)
+
 /*
   Transpiles a piece of source code so that it does not contain
   Transclusion expressions anymore, which are usually not valid in common languages.
@@ -96,6 +82,9 @@ export function parseSymbol (str) {
   return _createSymbol(m)
 }
 
+/*
+  Derives the qualified id of a cell.
+*/
 export function qualifiedId (doc, cell) {
   let cellId = isString(cell) ? cell : cell.id
   if (doc) {
@@ -253,7 +242,7 @@ export function applyCellTransformations (cell) {
   }
 }
 
-export function transformRange (start, end, pos, count) {
+function transformRange (start, end, pos, count) {
   if (!count) return false
   if (!isNumber(pos) || !isNumber(count)) throw new Error('pos and count must be integers')
   if (end < pos) return false
@@ -286,100 +275,19 @@ export function transformRange (start, end, pos, count) {
   return { start, end }
 }
 
+// TODO: change the naming
+// This is used within sheets to distinguish constants and cells with expression
+//
 export function isExpression (source) {
-  return /^\s*=/.exec(source)
+  return EXPRESSION_CELL_RE.exec(source)
 }
 
-export function getCellSymbolName (s) {
-  let newName = getCellLabel(s.startRow, s.startCol)
+function getCellSymbolName (s) {
+  let newName = tableHelpers.getCellLabel(s.startRow, s.startCol)
   if (s.type === 'range') {
-    newName += ':' + getCellLabel(s.endRow, s.endCol)
+    newName += ':' + tableHelpers.getCellLabel(s.endRow, s.endCol)
   }
   return newName
-}
-
-export const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-
-export function getColumnLabel (colIdx) {
-  if (!isNumber(colIdx)) {
-    throw new Error('Illegal argument.')
-  }
-  var label = ''
-  while(true) { // eslint-disable-line
-    var mod = colIdx % ALPHABET.length
-    colIdx = Math.floor(colIdx / ALPHABET.length)
-    label = ALPHABET[mod] + label
-    if (colIdx > 0) colIdx--
-    else if (colIdx === 0) break
-  }
-  return label
-}
-
-export function getRowCol (cellLabel) {
-  var match = /^([A-Z]+)([1-9][0-9]*)$/.exec(cellLabel)
-  return [
-    parseInt(match[2], 10) - 1,
-    getColumnIndex(match[1])
-  ]
-}
-
-export function getColumnIndex (colStr) {
-  let index = 0
-  let rank = 1
-  for (let i = 0; i < colStr.length; i++) {
-    let letter = colStr[i]
-    index += rank * ALPHABET.indexOf(letter)
-    rank++
-  }
-  return index
-}
-
-export function getCellLabel (rowIdx, colIdx) {
-  let colLabel = getColumnLabel(colIdx)
-  let rowLabel = rowIdx + 1
-  return colLabel + rowLabel
-}
-
-export function getIndexesFromRange (start, end) {
-  let [startRow, startCol] = getRowCol(start)
-  let endRow, endCol
-  if (end) {
-    ([endRow, endCol] = getRowCol(end))
-    if (startRow > endRow) ([startRow, endRow] = [endRow, startRow])
-    if (startCol > endCol) ([startCol, endCol] = [endCol, startCol])
-  } else {
-    ([endRow, endCol] = [startRow, startCol])
-  }
-  return { startRow, startCol, endRow, endCol }
-}
-
-export function getRangeFromMatrix (cells, startRow, startCol, endRow, endCol, force2D) {
-  if (!force2D) {
-    if (startRow === endRow && startCol === endCol) {
-      let row = cells[startCol]
-      if (row) return row[endCol]
-      else return undefined
-    }
-    if (startRow === endRow) {
-      let row = cells[startRow]
-      if (row) return row.slice(startCol, endCol + 1)
-      else return []
-    }
-    if (startCol === endCol) {
-      let res = []
-      for (let i = startRow; i <= endRow; i++) {
-        let row = cells[i]
-        if (row) res.push(row[startCol])
-      }
-      return res
-    }
-  }
-  let res = []
-  for (var i = startRow; i < endRow + 1; i++) {
-    let row = cells[i]
-    if (row) res.push(row.slice(startCol, endCol + 1))
-  }
-  return res
 }
 
 export function valueFromText (text, preferredType = 'any') {

@@ -16,7 +16,7 @@
     "standard": "^11.0.1",
     "stencila-libcore": "^0.2.13",
     "stencila-mini": "0.14.2",
-    "substance": "1.0.0-preview.63",
+    "substance": "1.0.0-preview.64",
     "substance-bundler": "0.24.3",
     "substance-test": "0.11.0",
     "tap-spec": "^4.1.1",

@@ -4,7 +4,7 @@ import { RuntimeError } from '../src/CellErrors'
 import { BROKEN_REF } from '../src/engineHelpers'
 import {
   setupEngine, getValue, getValues, getSources, getStates, getErrors,
-  cycle, play, queryCells
+  cycle, play, queryCells, testAsync
 } from './testHelpers'
 
 test('Engine: simple sheet', t => {
@@ -1110,6 +1110,23 @@ test('Engine: mini expression with invalid characters should result in syntax er
     .then(() => {
       t.deepEqual(getErrors(cells), [['syntax']], 'There should be a syntax error.')
     })
+})
+
+testAsync('Engine: sheet cell with output', async (t) => {
+  let { engine } = setupEngine()
+  let sheet = engine.addSheet({
+    id: 'sheet1',
+    lang: 'mini',
+    cells: [
+      ['1', 'x = A1 + 3'],
+      ['3', '= A2 * x'],
+      ['5', '= A3 * B1']
+    ]
+  })
+  let [[, cell2], [, cell4], [, cell6]] = sheet.getCells()
+  await play(engine)
+  t.deepEqual(getValues([cell2, cell4, cell6]), [4, 12, 20], 'cells should have correct values')
+  t.end()
 })
 
 function _checkActions (t, engine, cells, expected) {

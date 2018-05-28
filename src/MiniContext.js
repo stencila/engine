@@ -1,5 +1,6 @@
 import { parse } from 'stencila-mini'
-import { getCellLabel, gather } from './engineHelpers'
+import { tableHelpers } from 'substance'
+import { gather } from './engineHelpers'
 
 export default class MiniContext {
   constructor (host) {
@@ -177,13 +178,13 @@ class ExprContext {
       }
       case 'cell': {
         // TODO: would be good to have the symbol name stored in the symbol
-        let name = getCellLabel(symbol.row, symbol.col)
+        let name = tableHelpers.getCellLabel(symbol.row, symbol.col)
         return this.values[name]
       }
       case 'range': {
         // TODO: would be good to have the symbol name stored in the symbol
-        let startName = getCellLabel(symbol.startRow, symbol.startCol)
-        let endName = getCellLabel(symbol.endRow, symbol.endCol)
+        let startName = tableHelpers.getCellLabel(symbol.startRow, symbol.startCol)
+        let endName = tableHelpers.getCellLabel(symbol.endRow, symbol.endCol)
         return this.values[`${startName}_${endName}`]
       }
       default:
