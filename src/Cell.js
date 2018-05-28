@@ -171,13 +171,25 @@ export default class Cell {
     let transpiled
     let symbolMapping = {}
     let isConstant = false
+    // in sheets there is a distinction between constants and
+    // expressions. Typically, expression start with an '='.
+    // In addition we allow cells to register an alias such as 'x = 1'
+    // Then the cell can be addressed either via cell notation, such as 'A1',
+    // or by name 'x'
     if (this.isSheetCell()) {
       let m = isExpression(source)
       if (m) {
-        let L = m[0].length
-        let prefix = new Array(L)
-        prefix.fill(' ')
-        source = prefix + source.slice(L)
+        // there is an output name if the user writes 'x = ...'
+        let output = m[1]
+        // if the cell is an expression without an output name
+        // we must transpile the source, because a leading '='
+        // is not valid in all of the languages we consider
+        if (!output) {
+          let L = m[0].length
+          let prefix = new Array(L)
+          prefix.fill(' ')
+          source = prefix + source.slice(L)
+        }
         transpiled = transpile(source, symbolMapping)
       } else {
         isConstant = true
