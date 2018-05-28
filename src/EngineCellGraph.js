@@ -60,12 +60,12 @@ export default class EngineCellGraph extends CellGraph {
   }
 
   _getAffected (cell) {
+    let affected = super._getAffected(cell)
+    // Note: in addition to explicit dependencies of sheet cells
+    // we add all cells that depend on this cell via a cell or range expression
     if (cell.isSheetCell()) {
-      let affected = []
       cell.deps.forEach(s => affected.push(s.cell.id))
-      return affected
-    } else {
-      return super._getAffected(cell)
     }
+    return affected
   }
 }
