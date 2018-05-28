@@ -1,13 +1,14 @@
-import { isArray } from 'substance'
+import test from 'tape'
+import { isArray, tableHelpers } from 'substance'
 import Engine from '../src/Engine'
+import { toString as cellStateToString } from '../src/CellStates'
 import SimpleHost from '../src/SimpleHost'
 import MiniContext from '../src/MiniContext'
 import JsContext from '../src/JsContext'
+import { parseSymbol } from '../src/engineHelpers'
 import { libtest } from './libtest'
-import { toString as cellStatusToString } from '../src/CellStates'
-import {
-  parseSymbol, getIndexesFromRange, getRangeFromMatrix, getRowCol
-} from '../src/engineHelpers'
+
+const { getRowCol, getIndexesFromRange, getRangeFromMatrix } = tableHelpers
 
 export function setupEngine () {
   let host = new TestHost()
@@ -90,7 +91,7 @@ export function getErrors (cells) {
 
 export function getStates (cells) {
   return cells.map(cell => {
-    return cellStatusToString(cell.status)
+    return cellStateToString(cell.status)
   })
 }
 
@@ -128,8 +129,7 @@ export function queryValues (engine, expr) {
   done at once.
 */
 export function cycle (engine) {
-  let actions = engine.cycle()
-  return Promise.all(actions)
+  return engine._runCycle()
 }
 
 /*
@@ -138,26 +138,14 @@ export function cycle (engine) {
 export function play (engine) {
   return new Promise((resolve) => {
     function step () {
-      if (_needsUpdate(engine)) {
-        cycle(engine).then(step)
+      if (engine._needsUpdate()) {
+        engine._runCycle().then(step)
       } else {
         resolve()
       }
     }
     step()
   })
-}
-
-function _needsUpdate (engine) {
-  const graph = engine._graph
-  if (graph.needsUpdate()) return true
-  const nextActions = engine._nextActions
-  if (nextActions.size === 0) return false
-  // update is required if there is an action that has not been suspended
-  for (let [, a] of nextActions) {
-    if (!a.suspended) return true
-  }
-  return false
 }
 
 export function setSheetSelection (sheetSession, expr) {

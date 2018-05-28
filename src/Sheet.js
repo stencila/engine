@@ -1,9 +1,10 @@
-import { uuid, isString, clone } from 'substance'
+import { uuid, isString, clone, tableHelpers } from 'substance'
 import {
-  recordTransformations, applyCellTransformations, getCellLabel, getColumnLabel,
-  qualifiedId as _qualifiedId
+  recordTransformations, applyCellTransformations, qualifiedId as _qualifiedId
 } from './engineHelpers'
 import SheetCell from './SheetCell'
+
+const { getCellLabel, getColumnLabel } = tableHelpers
 
 /*
   Engine's internal model of a Spreadsheet.

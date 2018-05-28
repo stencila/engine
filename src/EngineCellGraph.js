@@ -1,6 +1,5 @@
-import { flatten } from 'substance'
+import { flatten, tableHelpers } from 'substance'
 import CellGraph from './CellGraph'
-import { getRangeFromMatrix } from './engineHelpers'
 
 export default class EngineCellGraph extends CellGraph {
   constructor (engine) {
@@ -50,7 +49,7 @@ export default class EngineCellGraph extends CellGraph {
       case 'range': {
         let sheet = this._getDoc(s)
         if (sheet) {
-          let cells = getRangeFromMatrix(sheet.cells, s.startRow, s.startRow, s.endRow, s.endCol)
+          let cells = tableHelpers.getRangeFromMatrix(sheet.cells, s.startRow, s.startRow, s.endRow, s.endCol)
           return flatten(cells).map(c => c.id)
         }
         break
