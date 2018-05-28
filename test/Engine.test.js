@@ -1119,12 +1119,13 @@ testAsync('Engine: sheet cell with output', async (t) => {
     lang: 'mini',
     cells: [
       ['1', 'x = A1 + 3'],
-      ['3', '= 4*x']
+      ['3', '= A2 * x'],
+      ['5', '= A3 * B1']
     ]
   })
-  let [[, cell2], [, cell4]] = sheet.getCells()
+  let [[, cell2], [, cell4], [, cell6]] = sheet.getCells()
   await play(engine)
-  t.deepEqual(getValues([cell2, cell4]), [4, 16], 'cells should have correct values')
+  t.deepEqual(getValues([cell2, cell4, cell6]), [4, 12, 20], 'cells should have correct values')
   t.end()
 })
 
