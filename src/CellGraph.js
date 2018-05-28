@@ -4,7 +4,7 @@ import {
 } from './CellErrors'
 import {
   UNKNOWN, ANALYSED, BROKEN, FAILED, BLOCKED, WAITING, READY, RUNNING, OK,
-  toInteger
+  cellStateToInteger
 } from './CellStates'
 
 const MSG_UNRESOLVED_INPUT = 'Unresolved input.'
@@ -459,27 +459,27 @@ export default class CellGraph {
         let _cell = this._cells[res]
         // NOTE: for development we kept the less performant but more readable
         // representation as symbols, instead of ints
-        inputStates.push(toInteger(_cell.status))
+        inputStates.push(cellStateToInteger(_cell.status))
       } else {
         res.forEach(id => {
           let _cell = this._cells[id]
-          inputStates.push(toInteger(_cell.status))
+          inputStates.push(cellStateToInteger(_cell.status))
         })
       }
     })
     if (cell.hasSideEffects && cell.prev) {
       let _cell = this._cells[cell.prev]
       if (_cell) {
-        inputStates.push(toInteger(_cell.status))
+        inputStates.push(cellStateToInteger(_cell.status))
       }
     }
     let inputState = Math.min(...inputStates)
     // Note: it is easier to do this in an arithmetic way
     // than in boolean logic
     let newState
-    if (inputState <= toInteger(BLOCKED)) {
+    if (inputState <= cellStateToInteger(BLOCKED)) {
       newState = BLOCKED
-    } else if (inputState <= toInteger(RUNNING)) {
+    } else if (inputState <= cellStateToInteger(RUNNING)) {
       newState = WAITING
     } else { // if (inputState === OK) {
       newState = READY

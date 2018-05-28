@@ -1,6 +1,6 @@
 import { isString, EventEmitter, flatten, forEach, tableHelpers } from 'substance'
 import { ContextError, RuntimeError, SyntaxError } from './CellErrors'
-import { UNKNOWN, ANALYSED, READY, toInteger as statusToInt } from './CellStates'
+import { UNKNOWN, ANALYSED, READY, cellStateToInteger } from './CellStates'
 import CellSymbol from './CellSymbol'
 import { gather, valueFromText, qualifiedId as _qualifiedId } from './engineHelpers'
 import EngineCellGraph from './EngineCellGraph'
@@ -622,7 +622,7 @@ export default class Engine extends EventEmitter {
     const graph = this._graph
     let cell = graph.getCell(id)
     cell.autorun = true
-    if (reset && statusToInt(cell.status) > statusToInt(ANALYSED)) {
+    if (reset && cellStateToInteger(cell.status) > cellStateToInteger(ANALYSED)) {
       cell.status = ANALYSED
       graph._structureChanged.add(id)
     }

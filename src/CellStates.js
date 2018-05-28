@@ -18,7 +18,7 @@ const RUNNING = Symbol('RUNNING')
 // evaluation succeeded
 const OK = Symbol('OK')
 
-function toInteger (state) {
+function cellStateToInteger (state) {
   switch (state) {
     case UNKNOWN: return -2
     case ANALYSED: return -1
@@ -34,7 +34,7 @@ function toInteger (state) {
   }
 }
 
-function toString (state) {
+function cellStateToString (state) {
   switch (state) {
     case UNKNOWN: return 'unknown'
     case ANALYSED: return 'analysed'
@@ -50,4 +50,4 @@ function toString (state) {
   }
 }
 
-export { UNKNOWN, ANALYSED, BROKEN, FAILED, BLOCKED, WAITING, READY, RUNNING, OK, toInteger, toString }
+export { UNKNOWN, ANALYSED, BROKEN, FAILED, BLOCKED, WAITING, READY, RUNNING, OK, cellStateToInteger, cellStateToString }

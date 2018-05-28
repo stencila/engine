@@ -1,4 +1,5 @@
 export { default as CellGraph } from './CellGraph'
+export * from './CellStates'
 export { default as Engine } from './Engine'
 export { default as MiniContext } from './MiniContext'
 export { default as JsContext } from './JsContext'

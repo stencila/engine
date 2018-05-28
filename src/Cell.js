@@ -1,5 +1,5 @@
 import { isString } from 'substance'
-import { UNKNOWN, toString as cellStatusToString } from './CellStates'
+import { UNKNOWN, cellStateToString } from './CellStates'
 import { transpile, isExpression, qualifiedId } from './engineHelpers'
 
 export default class Cell {
@@ -154,7 +154,7 @@ export default class Cell {
       id: this.unqualifiedId,
       lang: this.lang,
       source: this._source.original,
-      status: cellStatusToString(this.status),
+      status: cellStateToString(this.status),
       // inputs,
       // output,
       errors: this.errors,
@@ -163,7 +163,7 @@ export default class Cell {
   }
 
   _getStatusString () {
-    return cellStatusToString(this.status)
+    return cellStateToString(this.status)
   }
 
   _transpile (source) {

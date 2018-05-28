@@ -1,7 +1,7 @@
 import test from 'tape'
 import { isArray, tableHelpers } from 'substance'
 import Engine from '../src/Engine'
-import { toString as cellStateToString } from '../src/CellStates'
+import { cellStateToString } from '../src/CellStates'
 import SimpleHost from '../src/SimpleHost'
 import MiniContext from '../src/MiniContext'
 import JsContext from '../src/JsContext'
