@@ -5,7 +5,7 @@ const add = {
   name: 'add',
   methods: {
     default: {
-      params: [
+      params : [
         { name: 'value', type: 'number' },
         { name: 'other', type: 'number' }
       ]
@@ -21,7 +21,7 @@ const multiply = {
   name: 'multiply',
   methods: {
     default: {
-      params: [
+      params : [
         { name: 'value', type: 'number' },
         { name: 'other', type: 'number' }
       ]
@@ -33,7 +33,7 @@ const multiply = {
 }
 
 function sum (...vals) {
-  return vals.reduce((a, b) => {
+  return vals.reduce((a,b) => {
     if (b.type === 'table') {
       forEach(b.data, (vals) => {
         a += sum(vals)
@@ -44,7 +44,7 @@ function sum (...vals) {
     } else if (isArray(b.data)) {
       return sum(...b.data)
     } else {
-      return a + b
+      return a+b
     }
   }, 0)
 }
@@ -54,12 +54,12 @@ const sum_ = {
   name: 'sum',
   methods: {
     default: {
-      params: [
-        { name: 'a', type: 'number' },
-        { name: 'b', type: 'number' },
-        { name: 'c', type: 'number' },
-        { name: 'd', type: 'number' },
-        { name: 'e', type: 'number' }
+      params : [
+        { name: "a", type: "number" },
+        { name: "b", type: "number" },
+        { name: "c", type: "number" },
+        { name: "d", type: "number" },
+        { name: "e", type: "number" },
       ]
     }
   },
@@ -80,11 +80,11 @@ const rand = {
 }
 
 // used in tests to reset the pseudo random generator
-export function _resetRand () {
+export function _reset_rand() {
   RAND_COUNT = 1
 }
 
-const noParams = {
+const no_params = {
   type: 'function',
   name: 'no_params',
   methods: {
@@ -95,13 +95,13 @@ const noParams = {
   }
 }
 
-const oneParam = {
+const one_param = {
   type: 'function',
   name: 'one_param',
   methods: {
     default: {
       params: [
-        { name: 'param1', type: 'number' }
+        { name: "param1", type: "number" }
       ]
     }
   },
@@ -110,21 +110,21 @@ const oneParam = {
   }
 }
 
-const oneParamWithDefault = {
+const one_param_with_default = {
   type: 'function',
   name: 'one_param_with_default',
   methods: {
     default: {
       params: [
-        {
-          name: 'param1',
-          type: 'string',
-          default: { type: 'string', value: 'Hello!' }
+        { 
+          name: "param1",
+          type: "string",
+          default: { type: "string", value: "Hello!" }
         }
       ]
     }
   },
-  body: function (param1 = 'Hello!') {
+  body: function (param1='Hello!') {
     return param1
   }
 }
@@ -137,8 +137,8 @@ export const libtest = {
     sum: sum_,
     multiply,
     rand,
-    noParams,
-    oneParam,
-    oneParamWithDefault
+    no_params,
+    one_param,
+    one_param_with_default
   }
 }
