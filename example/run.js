@@ -8,8 +8,8 @@ const fs = require('fs')
 ;(async function () {
   let host = await setupHost({
     contexts: [
-      { lang: 'mini', client: MiniContext },
-      { lang: 'js', client: JsContext }
+      { id: 'mickey', lang: 'mini', client: MiniContext },
+      { id: 'goofy', lang: 'js', client: JsContext }
     ],
     libraries: [{
       lang: 'js',

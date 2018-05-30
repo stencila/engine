@@ -14,8 +14,10 @@ b.task('lib:browser', () => {
     output: [{
       file: DIST + 'stencila-engine.js',
       format: 'umd',
-      name: 'stencilaEngine'
+      name: 'stencilaEngine',
+      globals: { 'stencila-js': 'window.stencilaJs' }
     }],
+    external: ['stencila-js'],
     commonjs: {
       namedExports: { 'acorn/dist/walk.js': [ 'simple', 'base' ] }
     },
@@ -29,6 +31,7 @@ b.task('lib:node', () => {
       file: DIST + 'stencila-engine.cjs.js',
       format: 'cjs'
     }],
+    external: ['stencila-js'],
     commonjs: {
       namedExports: { 'acorn/dist/walk.js': [ 'simple', 'base' ] }
     },
@@ -45,10 +48,11 @@ b.task('test:browser', () => {
       globals: {
         'tape': 'substanceTest.test',
         'stencila-mini': 'window.stencilaMini',
+        'stencila-js': 'window.stencilaJs',
         'stencila-libcore': 'window.stencilaLibcore'
       }
     }],
-    external: ['tape', 'stencila-mini', 'stencila-libcore'],
+    external: ['tape', 'stencila-mini', 'stencila-js', 'stencila-libcore'],
     commonjs: {
       namedExports: { 'acorn/dist/walk.js': [ 'simple', 'base' ] }
     },

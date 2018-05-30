@@ -13,6 +13,8 @@ export default class CellGraph {
   constructor () {
     // cell data by id
     this._cells = {}
+    // a map of names to values that are global
+    this._globals = new Map()
     // symbols -> cell ids; which cell is depending on a symbol
     this._ins = {}
     // symbol -> cell id; which symbol is provided by which cell
@@ -322,7 +324,9 @@ export default class CellGraph {
     let cell = this._cells[id]
     // detect unresolvable inputs
     let inputs = Array.from(cell.inputs)
-    let unresolved = inputs.filter(s => !this._resolve(s))
+    let unresolved = inputs.filter(s => {
+      return !this._resolve(s) && !this._globals.has(s.name)
+    })
     if (unresolved.length > 0) {
       cell.clearErrors(e => e instanceof UnresolvedInputError)
       cell.addErrors([new UnresolvedInputError(MSG_UNRESOLVED_INPUT, { unresolved })])

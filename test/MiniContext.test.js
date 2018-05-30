@@ -1,105 +1,182 @@
 import test from 'tape'
+import { map } from 'substance'
+import { JavascriptContext } from 'stencila-js'
 import MiniContext from '../src/MiniContext'
-import FunctionManager from '../../src/function/FunctionManager'
+import setupHost from '../src/setupHost'
 import { libtest } from './libtest'
-import {
-  setupEngine, testAsync
-} from './testHelpers'
+import { testAsync } from './testHelpers'
 
-function setupContextWithFunctions() {
-  // A JsContext with the test function library
-  let jsContext = new JsContext()
-  jsContext.importLibrary(libtest)
-  // Function manager for getting function specs
-  let functionManager = new FunctionManager()
-  functionManager.importLibrary(jsContext, libtest)
-  // A mock Host that provides the JsContext when requested
-  let host = {
-    createContext: function(language) {
-      if (language !== 'js') throw new Error('This stub only creates JsContexts')
-      return Promise.resolve(jsContext)
-    },
-    functionManager
+test('MiniContext: compile(x=5)', t => {
+  let mini = new MiniContext()
+  let code = 'x=5'
+  let actual = mini._compile({ code })
+  let expected = {
+    inputs: [],
+    outputs: [{ name: 'x' }],
+    messages: []
   }
-  return new MiniContext(host)
+  _isFulfilled(t, actual, expected)
+  t.end()
+})
+
+test('MiniContext: compile(foo(x,y,z))', t => {
+  let mini = new MiniContext()
+  let code = 'foo(x,y,z)'
+  let actual = mini._compile({ code })
+  let expected = {
+    inputs: [{name: 'x'}, {name: 'y'}, {name: 'z'}, {name: 'foo'}],
+    outputs: [],
+    messages: []
+  }
+  _isFulfilled(t, actual, expected)
+  t.end()
+})
+
+testAsync('MiniContext: execute(x=5)', async t => {
+  let mini = new MiniContext()
+  let code = 'x=5'
+  let cell = mini._compile({ code })
+  let actual = await mini.execute(cell)
+  let expected = {
+    inputs: [],
+    outputs: [{name: 'x', value: {type: 'number', data: 5}}],
+    messages: []
+  }
+  _isFulfilled(t, actual, expected)
+  t.end()
+})
+
+testAsync('MiniContext: execute(1+2+3)', async t => {
+  let { mini } = await _setupHost()
+  let code = '1+2+3'
+  let cell = mini._compile({ code })
+  _provideLibFunction(cell, 'add')
+  let actual = await mini.execute(cell)
+  let expected = {
+    outputs: [{value: {type: 'number', data: 6}}],
+    messages: []
+  }
+  _isFulfilled(t, actual, expected)
+  t.end()
+})
+
+testAsync('MiniContext: execute(noParams())', async t => {
+  let { mini } = await _setupHost()
+  let code = 'noParams()'
+  let cell = mini._compile({ code })
+  _provideLibFunction(cell, 'noParams')
+  let actual = await mini.execute(cell)
+  let expected = {
+    outputs: [{value: {type: 'number', data: 5}}],
+    messages: []
+  }
+  _isFulfilled(t, actual, expected)
+  t.end()
+})
+
+testAsync('MiniContext: execute(noParams() + 1)', async t => {
+  let { mini } = await _setupHost()
+  let code = 'noParams() + 1'
+  let cell = mini._compile({ code })
+  _provideLibFunction(cell, 'noParams')
+  _provideLibFunction(cell, 'add')
+  let actual = await mini.execute(cell)
+  let expected = {
+    outputs: [{value: {type: 'number', data: 6}}],
+    messages: []
+  }
+  _isFulfilled(t, actual, expected)
+  t.end()
+})
+
+testAsync('MiniContext: execute(oneParam(2))', async t => {
+  let { mini } = await _setupHost()
+  let code = 'oneParam(2)'
+  let cell = mini._compile({ code })
+  _provideLibFunction(cell, 'oneParam')
+  let actual = await mini.execute(cell)
+  let expected = {
+    outputs: [{value: {type: 'number', data: 2.2}}],
+    messages: []
+  }
+  _isFulfilled(t, actual, expected)
+  t.end()
+})
+
+testAsync('MiniContext: execute(oneParamWithDefault("Howdy!"))', async t => {
+  let { mini } = await _setupHost()
+  let code = 'oneParamWithDefault("Howdy!")'
+  let cell = mini._compile({ code })
+  _provideLibFunction(cell, 'oneParamWithDefault')
+  let actual = await mini.execute(cell)
+  let expected = {
+    outputs: [{value: {type: 'string', data: 'Howdy!'}}],
+    messages: []
+  }
+  _isFulfilled(t, actual, expected)
+  t.end()
+})
+
+testAsync('MiniContext: execute(oneParamWithDefault())', async t => {
+  let { mini } = await _setupHost()
+  let code = 'oneParamWithDefault()'
+  let cell = mini._compile({ code })
+  _provideLibFunction(cell, 'oneParamWithDefault')
+  let actual = await mini.execute(cell)
+  let expected = {
+    outputs: [{value: {type: 'string', data: 'Hello!'}}],
+    messages: []
+  }
+  _isFulfilled(t, actual, expected)
+  t.end()
+})
+
+async function _setupHost () {
+  let host = await setupHost({
+    contexts: [
+      { id: 'mini', lang: 'mini', client: MiniContext },
+      { id: 'js', lang: 'js', client: JavascriptContext }
+    ],
+    libraries: [{
+      lang: 'js',
+      lib: libtest
+    }]
+  })
+  let mini = host.getContext('mini')
+  let js = host.getContext('js')
+  return { host, mini, js }
 }
 
-test('MiniContext: analyseCode(x=5)', t => {
-  let c = setupContextWithFunctions()
-  t.plan(1)
-  c.analyseCode('x=5').then((res) => {
-    t.equal(res.output, 'x', 'there should be output variable x')
+function _isFulfilled (t, cell, expected) {
+  let actual = {}
+  Object.keys(expected).forEach(n => {
+    switch (n) {
+      case 'inputs': {
+        actual[n] = map(cell[n])
+        break
+      }
+      default:
+        actual[n] = cell[n]
+    }
   })
-})
+  t.deepEqual(actual, expected)
+}
 
-test('MiniContext: analyseCode(foo(x,y,z))', t => {
-  let c = setupContextWithFunctions()
-  t.plan(1)
-  c.analyseCode('foo(x,y,z)').then((res) => {
-    t.deepEqual(res.inputs, ['x','y','z'], 'there should be input variables x,y,z')
+function _setInput (cell, name, data) {
+  let input = cell.inputs.get(name)
+  Object.assign(input, data)
+}
+
+function _provideLibFunction (cell, name) {
+  // EXPERIMENTAL: trying a
+  _setInput(cell, name, {
+    value: {
+      type: 'function',
+      data: {
+        name: name,
+        context: 'js',
+        library: 'test'
+      }
+    }
   })
-})
-
-test('MiniContext: x=5', t => {
-  let c = setupContextWithFunctions()
-  t.plan(1)
-  c.executeCode('x=5').then((res) => {
-    t.equal(res.value.data, 5, 'value should be correct')
-  })
-})
-
-test('MiniContext: 1+2+3', t => {
-  let c = setupContextWithFunctions()
-  t.plan(1)
-  c.executeCode('1+2+3').then((res) => {
-    let val = res.value
-    t.equal(val.data, 6, 'value should be correct')
-  })
-})
-
-test('MiniContext: no_params()', t => {
-  let c = setupContextWithFunctions()
-  c.executeCode('no_params()').then((res) => {
-    let val = res.value
-    t.equal(val.type, 'integer', 'type should be correct')
-    t.equal(val.data, 5, 'result should be correct')
-    t.end()
-  })
-})
-
-test('MiniContext: no_params() + 1', t => {
-  let c = setupContextWithFunctions()
-  c.executeCode('no_params() + 1').then((res) => {
-    let val = res.value
-    t.equal(val.type, 'integer', 'type should be correct')
-    t.equal(val.data, 6, 'result should be correct')
-    t.end()
-  })
-})
-
-test('MiniContext: one_param(2)', t => {
-  let c = setupContextWithFunctions()
-  c.executeCode('one_param(2)').then((res) => {
-    let val = res.value
-    t.equal(val.type, 'number', 'type should be correct')
-    t.equal(val.data, 2.2, 'result should be correct')
-    t.end()
-  })
-})
-
-
-test('MiniContext: one_param_with_default("Howdy!")', t => {
-  let c = setupContextWithFunctions()
-  c.executeCode('one_param_with_default("Howdy!")').then((res) => {
-    t.equal(res.value.data, "Howdy!")
-    t.end()
-  })
-})
-
-test('MiniContext: one_param_with_default()', t => {
-  let c = setupContextWithFunctions()
-  c.executeCode('one_param_with_default()').then((res) => {
-    t.equal(res.value.data, "Hello!")
-    t.end()
-  })
-})
+}

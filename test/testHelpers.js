@@ -1,10 +1,10 @@
 import test from 'tape'
 import { isArray, tableHelpers } from 'substance'
+import { JavascriptContext } from 'stencila-js'
 import Engine from '../src/Engine'
 import { cellStateToString } from '../src/CellStates'
 import SimpleHost from '../src/SimpleHost'
 import MiniContext from '../src/MiniContext'
-import JsContext from '../src/JsContext'
 import { parseSymbol } from '../src/engineHelpers'
 import { libtest } from './libtest'
 
@@ -29,21 +29,34 @@ export function setupEngine () {
   let host = new TestHost()
   host.configure({
     contexts: [
-      { lang: 'mini', client: MiniContext },
-      { lang: 'js', client: JsContext }
+      { id: 'mickey', lang: 'mini', client: MiniContext },
+      { id: 'goofy', lang: 'js', client: JavascriptContext }
     ]
   })
   let jsContext = host.getContext('js')
   jsContext.importLibrary(libtest)
-  // TODO: the functionManager will be removed once we treat functions as values
-  let functionManager = host._functionManager
-  functionManager.importLibrary(jsContext, libtest)
 
   let engine = new Engine({ host })
+  // EXPERIMENTAL: register all library content as globals
+  let names = Object.keys(libtest.funcs)
+  names.forEach(name => {
+    // TODO: need to discuss if the function type could
+    // be simplified
+    engine._addGlobal(name, {
+      type: 'function',
+      value: {
+        type: 'function',
+        data: {
+          name,
+          library: libtest.name,
+          context: jsContext.id
+        }
+      }
+    })
+  })
+
   let graph = engine._graph
-  // don't let the engine be run forever in tests
-  engine.run = () => {}
-  return { host, engine, graph }
+  return { engine, host, graph }
 }
 
 class TestHost extends SimpleHost {

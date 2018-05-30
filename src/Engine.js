@@ -398,7 +398,7 @@ export default class Engine extends EventEmitter {
           graph.addError(id, err)
         } else {
           const context = res
-          return context.analyseCode(transpiledSource)
+          return context.compile({ code: transpiledSource })
         }
       })
       .then(res => {
@@ -428,7 +428,7 @@ export default class Engine extends EventEmitter {
         let inputs = new Set()
         let output = null
         try {
-          ({ inputs, output } = this._compile(res, cell))
+          ({ inputs, output } = this._compileSymbols(res, cell))
         } catch (error) {
           cell.status = ANALYSED
           graph.addErrors(id, [new SyntaxError('Invalid syntax')])
@@ -455,8 +455,9 @@ export default class Engine extends EventEmitter {
     this._currentActions.set(id, action)
 
     const lang = cell.getLang()
+    const isExpr = cell.isSheetCell()
     let transpiledSource = cell.transpiledSource
-    // EXPERIMENTAL: remove 'autorun'
+    // EXPERIMENTAL: remove 'autorun' so that the cell is not updated forever
     delete cell.autorun
     return this._getContext(lang)
       .then(res => {
@@ -475,8 +476,20 @@ export default class Engine extends EventEmitter {
           // Catching errors here and turn them into a runtime error
           try {
             let inputs = this._getInputValues(cell.inputs)
-            return context.executeCode(transpiledSource, inputs)
+            let outputs = []
+            if (cell.output) outputs.push({name: cell.output.name})
+            return context.execute({
+              id: cell.id,
+              expr: isExpr,
+              code: transpiledSource,
+              inputs,
+              outputs
+            }).catch(err => {
+              console.error(err)
+              graph.addError(id, new RuntimeError(err.message, err))
+            })
           } catch (err) {
+            console.error(err)
             graph.addError(id, new RuntimeError(err.message, err))
           }
         }
@@ -489,38 +502,58 @@ export default class Engine extends EventEmitter {
         this._currentActions.delete(id)
         // stop if this was aboreted or there is already a new action for this id
         if (res) {
+          let value
+          let output = res.outputs[0]
+          if (output) value = output.value
           this._setAction(id, {
             type: 'update',
             id,
             errors: res.messages,
-            value: res.value
+            value
           })
         }
       })
   }
 
-  _compile (res, cell) {
+  _compileSymbols (res, cell) {
     const symbolMapping = cell.symbolMapping
     const docId = cell.docId
     let inputs = new Set()
     // Note: the inputs here are given as mangledStr
     // typically we have detected these already during transpilation
     // Let's wait for it to happen where this is not the case
-    res.inputs.forEach(str => {
+    res.inputs.forEach(input => {
+      let name = input.name
+      if (isString(input)) name = input
       // Note: during transpilation we identify some more symbols
       // which are actually not real variables
       // e.g. for `sum(A1:B10)` would detect 'sum' as a potential variable
       // due to the lack of language reflection at this point.
-      let s = symbolMapping[str]
-      if (!s) throw new Error('FIXME: a symbol has been returned by analyseCode which has not been tracked before')
-      // if there is a scope given explicily try to lookup the doc
-      // otherwise it is a local reference, i.e. within the same document as the cell
-      let targetDocId = s.scope ? this._lookupDocumentId(s.scope) : docId
-      inputs.add(new CellSymbol(s, targetDocId, cell))
+      let symbol = symbolMapping[name]
+      // some symbols can occur which are not tracked by us
+      // e.g. in Mini the '+' operator is implemented via cakk to 'add()'
+      if (!symbol) {
+        // HACK
+        // in this case we create a symbol that points to the local scope
+        symbol = new CellSymbol({
+          type: 'var',
+          name,
+          text: name,
+          mangledStr: name,
+          startPos: -1,
+          endPos: -1
+        }, docId, cell)
+      } else {
+        // if there is a scope given explicily try to lookup the doc
+        // otherwise it is a local reference, i.e. within the same document as the cell
+        let targetDocId = symbol.scope ? this._lookupDocumentId(symbol.scope) : docId
+        symbol = new CellSymbol(symbol, targetDocId, cell)
+      }
+      inputs.add(symbol)
     })
     // turn the output into a qualified id
-    let output
-    if (res.output) output = _qualifiedId(docId, res.output)
+    let output = res.outputs[0]
+    if (output) output = _qualifiedId(docId, output.name)
     return { inputs, output }
   }
 
@@ -540,8 +573,8 @@ export default class Engine extends EventEmitter {
   */
   _getInputValues (inputs) {
     const graph = this._graph
-    let result = {}
-    inputs.forEach(s => {
+    let result = new Map()
+    for (let s of inputs) {
       let val
       switch (s.type) {
         case 'cell': {
@@ -560,12 +593,12 @@ export default class Engine extends EventEmitter {
           break
         }
         default:
-          val = graph.getValue(s)
+          val = graph.getValue(s) || graph._globals.get(s.name)
       }
       // Note: the transpiled source code is used for evaluation
       // thus we expose values via transpiled/mangled names here
-      result[s.mangledStr] = val
-    })
+      result.set(s.mangledStr, val)
+    }
     return result
   }
 
@@ -663,6 +696,13 @@ export default class Engine extends EventEmitter {
 
   _isSuperseded (id, action) {
     return (this._currentActions.get(id) !== action)
+  }
+
+  // EXPERIMENTAL: allow to set some global values
+  // This is not dynamic yet, i.e. cells can not produce globals
+  // It is used for registering global library functions
+  _addGlobal (name, value) {
+    this._graph._globals.set(name, value)
   }
 }
 
