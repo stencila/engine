@@ -1,6 +1,4 @@
-// LEGACY: try to get rid of this file
-
-// import { isNumber, isString, tableHelpers } from 'substance'
+// index for all helpers
 import createSymbol from './createSymbol'
 import extractSymbols from './extractSymbols'
 import transpile from './transpile'
