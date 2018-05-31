@@ -1,5 +1,5 @@
 import test from 'tape'
-import { isExpression, valueFromText } from '../src/engineHelpers'
+import { isExpression, parseValue } from '../src/engineHelpers'
 
 test('engineHelpers: isExpression()', t => {
   t.ok(isExpression('= foo()'), 'a cell with leading "=" is considered an expression')
@@ -8,10 +8,9 @@ test('engineHelpers: isExpression()', t => {
 })
 
 test('engineHelpers: valueFromText', t => {
-  // TODO: add more of thi
-  t.deepEqual(valueFromText('false'), { type: 'boolean', data: false }, 'valueFromText should provide a correct unpacked value')
-  t.deepEqual(valueFromText('true'), { type: 'boolean', data: true }, 'valueFromText should provide a correct unpacked value')
-  t.deepEqual(valueFromText('1'), { type: 'integer', data: 1 }, 'valueFromText should provide a correct unpacked value')
-  t.deepEqual(valueFromText('1.2'), { type: 'number', data: 1.2 }, 'valueFromText should provide a correct unpacked value')
+  t.equal(parseValue('false'), false)
+  t.equal(parseValue('true'), true)
+  t.equal(parseValue('1'), 1)
+  t.equal(parseValue('1.2'), 1.2)
   t.end()
 })

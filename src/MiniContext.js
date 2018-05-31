@@ -1,5 +1,9 @@
+// TODO: apart from the dependency to the type system this is pretty independent now
+// With stencilas type system extracted into its own repo
+// we could move this class into stencile-mini, which would be more consistent
+// with other context implementations.
 import { parse } from 'stencila-mini'
-import { gather } from './engineHelpers'
+import { coerceArray } from './types'
 
 const INPUT_TYPES = new Set(['var', 'call'])
 
@@ -143,7 +147,7 @@ class _MiniContextAdapter {
   pack (value, type) {
     switch (type) {
       case 'array': {
-        return gather('array', value)
+        return coerceArray(value)
       }
       case 'range': {
         // FIXME: the API is a bit inconsistent here.

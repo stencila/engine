@@ -1,18 +1,6 @@
-/*
-  Trying to get minimal viable solution of a host, that is configured once
-  rather than dynamically reconfiguring itself.
+import { ContextError } from './CellErrors'
 
-  EXPERIMENTAL: playing with a different approach
-  to functions. The use-case of 'custom functions' inspired
-  us to move towards this direction in general.
-  This means, functions are essentially just values.
-  A 'function' type value, bears all information necessary
-  to call into the right context.
-  In theory we could even achieve to let a context define the function
-  on the fly in case of a stateless context.
-  This all needs some more thinking and discussions.
-*/
-export default class SimpleHost {
+export default class CompositeContext {
   constructor () {
     this._contexts = {}
     this._lang2context = {}
@@ -34,10 +22,40 @@ export default class SimpleHost {
     this._lang2context = lang2context
   }
 
-  getContext (lang) {
+  getLanguageContext (lang) {
     return this._lang2context[lang]
   }
 
+  async compile (cell) {
+    const lang = cell.lang
+    const context = this.getLanguageContext(lang)
+    if (!context) {
+      // TODO: need to think about how initialization should be done
+      Object.assign(cell, {messages: [], inputs: [], outputs: []})
+      cell.messages.push(new ContextError(`No context for language '${lang}'`))
+      return cell
+    } else {
+      return context.compile(cell)
+    }
+  }
+
+  async execute (cell) {
+    const lang = cell.lang
+    const context = this.getLanguageContext(lang)
+    if (!context) {
+      if (!cell.messages) cell.messages = []
+      cell.messages.push(new ContextError(`No context for language '${lang}'`))
+      return cell
+    } else {
+      return context.execute(cell)
+    }
+  }
+
+  /**
+    @param {object} a function value (TODO: link to documentation)
+    @param {array} an array of packed values
+    @param {object} a Map with packed values by name
+  */
   async callFunction (funcValue, args, namedArgs) {
     const funcSpec = funcValue.value.data
     if (!funcSpec.context) {

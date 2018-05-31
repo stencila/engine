@@ -2,7 +2,7 @@ import test from 'tape'
 import { map } from 'substance'
 import { JavascriptContext } from 'stencila-js'
 import MiniContext from '../src/MiniContext'
-import setupHost from '../src/setupHost'
+import setupContext from '../src/setupContext'
 import { libtest } from './libtest'
 import { testAsync } from './testHelpers'
 
@@ -47,7 +47,7 @@ testAsync('MiniContext: execute(x=5)', async t => {
 })
 
 testAsync('MiniContext: execute(1+2+3)', async t => {
-  let { mini } = await _setupHost()
+  let { mini } = await _setupContext()
   let code = '1+2+3'
   let cell = mini._compile({ code })
   _provideLibFunction(cell, 'add')
@@ -61,7 +61,7 @@ testAsync('MiniContext: execute(1+2+3)', async t => {
 })
 
 testAsync('MiniContext: execute(noParams())', async t => {
-  let { mini } = await _setupHost()
+  let { mini } = await _setupContext()
   let code = 'noParams()'
   let cell = mini._compile({ code })
   _provideLibFunction(cell, 'noParams')
@@ -75,7 +75,7 @@ testAsync('MiniContext: execute(noParams())', async t => {
 })
 
 testAsync('MiniContext: execute(noParams() + 1)', async t => {
-  let { mini } = await _setupHost()
+  let { mini } = await _setupContext()
   let code = 'noParams() + 1'
   let cell = mini._compile({ code })
   _provideLibFunction(cell, 'noParams')
@@ -90,7 +90,7 @@ testAsync('MiniContext: execute(noParams() + 1)', async t => {
 })
 
 testAsync('MiniContext: execute(oneParam(2))', async t => {
-  let { mini } = await _setupHost()
+  let { mini } = await _setupContext()
   let code = 'oneParam(2)'
   let cell = mini._compile({ code })
   _provideLibFunction(cell, 'oneParam')
@@ -104,7 +104,7 @@ testAsync('MiniContext: execute(oneParam(2))', async t => {
 })
 
 testAsync('MiniContext: execute(oneParamWithDefault("Howdy!"))', async t => {
-  let { mini } = await _setupHost()
+  let { mini } = await _setupContext()
   let code = 'oneParamWithDefault("Howdy!")'
   let cell = mini._compile({ code })
   _provideLibFunction(cell, 'oneParamWithDefault')
@@ -118,7 +118,7 @@ testAsync('MiniContext: execute(oneParamWithDefault("Howdy!"))', async t => {
 })
 
 testAsync('MiniContext: execute(oneParamWithDefault())', async t => {
-  let { mini } = await _setupHost()
+  let { mini } = await _setupContext()
   let code = 'oneParamWithDefault()'
   let cell = mini._compile({ code })
   _provideLibFunction(cell, 'oneParamWithDefault')
@@ -131,8 +131,8 @@ testAsync('MiniContext: execute(oneParamWithDefault())', async t => {
   t.end()
 })
 
-async function _setupHost () {
-  let host = await setupHost({
+async function _setupContext () {
+  let context = await setupContext({
     contexts: [
       { id: 'mini', lang: 'mini', client: MiniContext },
       { id: 'js', lang: 'js', client: JavascriptContext }
@@ -142,9 +142,8 @@ async function _setupHost () {
       lib: libtest
     }]
   })
-  let mini = host.getContext('mini')
-  let js = host.getContext('js')
-  return { host, mini, js }
+  let mini = context.getLanguageContext('mini')
+  return {mini}
 }
 
 function _isFulfilled (t, cell, expected) {

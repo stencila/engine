@@ -193,6 +193,7 @@ export default class Cell {
         transpiled = transpile(source, symbolMapping)
       } else {
         isConstant = true
+        transpiled = original
       }
     } else {
       transpiled = transpile(source, symbolMapping)

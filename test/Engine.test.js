@@ -333,7 +333,7 @@ testAsync('Engine: no context for lang', async t => {
 })
 
 testAsync('Engine: lost context', async t => {
-  let { engine, host } = setupEngine()
+  let { engine, context } = setupEngine()
   let doc = engine.addDocument({
     id: 'doc1',
     lang: 'mini',
@@ -347,7 +347,7 @@ testAsync('Engine: lost context', async t => {
   // now the cell should be scheduled for evaluation
   _checkActions(t, engine, cells, ['evaluate'])
   // and there we pretend a lost connection
-  host._disable(true)
+  context._disable(true)
   await play(engine)
   t.deepEqual(getErrors(cells), [['context']], 'there should an error about missing context')
   t.end()

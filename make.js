@@ -21,6 +21,9 @@ b.task('lib:browser', () => {
     commonjs: {
       namedExports: { 'acorn/dist/walk.js': [ 'simple', 'base' ] }
     },
+    alias: {
+      'stencila-js/src/types.js': require.resolve('stencila-js/src/types.js')
+    },
     json: true
   })
 })
@@ -55,6 +58,9 @@ b.task('test:browser', () => {
     external: ['tape', 'stencila-mini', 'stencila-js', 'stencila-libcore'],
     commonjs: {
       namedExports: { 'acorn/dist/walk.js': [ 'simple', 'base' ] }
+    },
+    alias: {
+      'stencila-js/src/types.js': require.resolve('stencila-js/src/types.js')
     },
     json: true
   })

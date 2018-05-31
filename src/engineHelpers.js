@@ -1,5 +1,4 @@
 import { isNumber, isString, tableHelpers } from 'substance'
-import { type, gather } from './value'
 
 export const BROKEN_REF = '#BROKEN_REF'
 
@@ -290,14 +289,7 @@ function getCellSymbolName (s) {
   return newName
 }
 
-export function valueFromText (text, preferredType = 'any') {
-  const data = _parseText(preferredType, text)
-  const type_ = type(data)
-  return { type: type_, data }
-}
-
-function _parseText (preferredType, text) {
-  // guess value
+export function parseValue (text) {
   if (text === 'false') {
     return false
   } else if (text === 'true') {
@@ -313,5 +305,3 @@ function _parseText (preferredType, text) {
     return text
   }
 }
-
-export { gather }

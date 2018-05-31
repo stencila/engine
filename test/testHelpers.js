@@ -3,10 +3,10 @@ import { isArray, tableHelpers } from 'substance'
 import { JavascriptContext } from 'stencila-js'
 import Engine from '../src/Engine'
 import { cellStateToString } from '../src/CellStates'
-import SimpleHost from '../src/SimpleHost'
 import MiniContext from '../src/MiniContext'
 import { parseSymbol } from '../src/engineHelpers'
 import { libtest } from './libtest'
+import TestContext from './TestContext'
 
 const { getRowCol, getIndexesFromRange, getRangeFromMatrix } = tableHelpers
 
@@ -26,21 +26,22 @@ export function testAsync (name, func) {
 }
 
 export function setupEngine () {
-  let host = new TestHost()
-  host.configure({
+  let context = new TestContext()
+  context.configure({
     contexts: [
       { id: 'mickey', lang: 'mini', client: MiniContext },
       { id: 'goofy', lang: 'js', client: JavascriptContext }
     ]
   })
-  let jsContext = host.getContext('js')
+  let jsContext = context.getLanguageContext('js')
   jsContext.importLibrary(libtest)
 
-  let engine = new Engine({ host })
+  let engine = new Engine(context)
   // EXPERIMENTAL: register all library content as globals
   let names = Object.keys(libtest.funcs)
   names.forEach(name => {
-    // TODO: need to discuss if the function type could
+    // TODO: do we want that extra level here?
+    // need to discuss if the function type could
     // be simplified
     engine._addGlobal(name, {
       type: 'function',
@@ -56,27 +57,7 @@ export function setupEngine () {
   })
 
   let graph = engine._graph
-  return { engine, host, graph }
-}
-
-class TestHost extends SimpleHost {
-  constructor () {
-    super()
-
-    this._disabled = false
-  }
-
-  _disable (val) {
-    this._disabled = val
-  }
-
-  getContext (name) {
-    if (this._disabled) {
-      return undefined
-    } else {
-      return super.getContext(name)
-    }
-  }
+  return { engine, context, graph }
 }
 
 export function getValue (cell) {

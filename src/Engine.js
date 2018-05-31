@@ -1,17 +1,18 @@
 import { isString, EventEmitter, flatten, forEach, tableHelpers } from 'substance'
-import { ContextError, RuntimeError, SyntaxError } from './CellErrors'
+import { CellError, RuntimeError, SyntaxError } from './CellErrors'
 import { UNKNOWN, ANALYSED, READY, cellStateToInteger } from './CellStates'
 import CellSymbol from './CellSymbol'
-import { gather, valueFromText, qualifiedId as _qualifiedId } from './engineHelpers'
+import { parseValue, qualifiedId as _qualifiedId } from './engineHelpers'
 import EngineCellGraph from './EngineCellGraph'
 import Sheet from './Sheet'
 import Document from './Document'
+import { coerceArray, pack } from './types'
 
-/*
-  WIP
+/**
   The Engine implements the Stencila Execution Model.
 
-  As the Engine can be run independently, and thus has its own model.
+  The Engine can be run independently, and thus has its own internal model.
+
   There are two types of resources containing cells, Documents and Sheets.
   Every document defines a variable scope. Variables are produced by cells.
   A document has an id but also a human readable name.
@@ -25,83 +26,13 @@ import Document from './Document'
 
   Across documents and sheets, cells are referenced using a transclusion syntax, prefixed with the document id or the document name, such as in
   `'My Document'!x` or `sheet1!A1:B10`.
-
-  > TODO: ATM we do not support other type of sheet references, such as via column name
-  > or defining custom ranges.
-
-  > Idea: use the column name as a reference to the corresponding cell in the same row
-  > I.e. instead of `= A1 * B1` write `= width * height`
-
-  Engine API
-  - register document (type, id)
-  - update document/sheet meta data (name, column information)
-  - add cell
-  - remove cell
-  - set breakpoint / pause a cell
-  - update cell data
-  - update cell order (documents)
-  - insert rows/cols
-  - remove rows/cols
-
-  While most of the time it is enough to look at cells independent of their
-  documnents topologoy, this is necessary for Sheets in general, and for
-  document cells with side-effects (global variables)
-
-  Sheet specifics:
-  - columns have meta data (name and type)
-  - cell type comes either from cell data, or from its column (necessary for type validation)
-  - spanning cells are rather a visual aspect. E.g. in GSheets the app
-    clears spanned cells, and thus cell references yield empty values
-
-  Sheet Ranges:
-
-  TODO: the former approach using special internal cells as proxy to
-  cell ranges turned out to be cumbersome and error prone.
-  Now I want to approach this differently, by adding a special means to lookup
-  cell symbols and to propagate cell states for these.
-
-  Open Questions:
-
-  Should the Engine be run inside the Application/Render thread?
-
-  On the one hand this could help to lower the load on the rendering thread.
-  On the other hand, it is very usefule to have a more direct linking
-  between the application and the engine: e.g. sharing the Host instance,
-  and in the other direction.
-  It is more important to run all contexts independently, so that
-  code can be executed in multiple threads.
-
-  How do structural changes of sheets affect the cell graph?
-
-  Sheet cells produce variables that look like `sheet1!A1`.
-  Changing the structure of a sheet means that all cells after
-  that need to be re-assigned. Changing the output symbol name only should not lead to a re-evaluation
-  of the cell.
-  The current state propagation mechanism does probably lead to potentially
-  unnecessary re-evaluations when structure has been changed.
-  This is because any kind of structural change leads to a reset of cell state
-  We should improve this at some point. For now, it is not
-  critical, because structural changes in sheets do not happen often,
-  and in documents re-evaluation is most often necessary anyways.
-
-  Sheet: should we allow to use column names as alias?
-
-  ATM, when using a 2D cell range, a table value is created
-  using column names when present, otherwise using the classical
-  column label (e.g. 'A'). This is somewhat inconsistent,
-  as someone could write code that makes use of the default column
-  labels, say `filter(data, 'A < 20')`, which breaks as soon that column
-  gets an explicit name.
-  If we wanted to still allow this, we would need some kind of an alias mechanism
-  in the table type.
-
 */
 export default class Engine extends EventEmitter {
-  constructor (options = {}) {
+  constructor (context) {
     super()
 
-    // needs to be connected to a host to be able to create contexts
-    this._host = options.host
+    if (!context) throw new Error('context is required')
+    this.context = context
 
     this._docs = {}
     this._graph = new EngineCellGraph(this)
@@ -115,10 +46,6 @@ export default class Engine extends EventEmitter {
     // - graph update
     this._nextActions = new Map()
     this._currentActions = new Map()
-  }
-
-  setHost (host) {
-    this._host = host
   }
 
   runOnce () {
@@ -152,8 +79,6 @@ export default class Engine extends EventEmitter {
   }
 
   runForEver (refreshInterval) {
-    if (!this._host) throw new Error('Must call setHost() before starting the Engine')
-
     // TODO: does this only work in the browser?
     if (this._runner) {
       clearInterval(this._runner)
@@ -363,9 +288,8 @@ export default class Engine extends EventEmitter {
     // in case of constants, casting the string into a value,
     // updating the cell graph and returning without further evaluation
     if (cell.isConstant()) {
-      // TODO: use the preferred type from the sheet
-      let preferredType = 'any'
-      let value = valueFromText(cell.source, preferredType)
+      // TODO: we might want to coerce to the type from the cell
+      let value = pack(parseValue(cell.source))
       // constants can't have inputs, so deregister them
       if (cell.inputs && cell.inputs.size > 0) {
         graph.setInputs(id, new Set())
@@ -381,67 +305,63 @@ export default class Engine extends EventEmitter {
     cell.status = UNKNOWN
     // leave a mark that we are currently running this action
     this._currentActions.set(id, action)
-    // otherwise the cell source is assumed to be dynamic source code
-    const transpiledSource = cell.transpiledSource
+
     const lang = cell.getLang()
-    return this._getContext(lang)
-      .then(res => {
+    const isExpr = cell.isSheetCell()
+    const transpiledSource = cell.transpiledSource
+    return this.context.compile({
+      code: transpiledSource,
+      lang,
+      expr: isExpr
+    }).then(res => {
+      if (this._isSuperseded(id, action)) {
+      // console.log('action has been superseded')
+        return
+      }
+      this._currentActions.delete(id)
       // stop if this was aboreted or there is already a new action for this id
-        if (this._isSuperseded(id, action)) {
-        // console.log('action has been superseded')
-          return
-        }
-        if (res instanceof Error) {
-          const msg = `Could not get context for ${lang}`
-          console.error(msg)
-          let err = new ContextError(msg, { lang })
-          graph.addError(id, err)
-        } else {
-          const context = res
-          return context.compile({ code: transpiledSource })
-        }
-      })
-      .then(res => {
-        if (this._isSuperseded(id, action)) {
-        // console.log('action has been superseded')
-          return
-        }
-        this._currentActions.delete(id)
-        // stop if this was aboreted or there is already a new action for this id
-        if (!res) return
-        // Note: treating all errors coming from analyseCode() as SyntaxErrors
-        // TODO: we might want to be more specific here
-        if (res.messages && res.messages.length > 0) {
+      if (!res) return
+      // Note: treating all errors coming from analyseCode() as SyntaxErrors
+      // TODO: we might want to be more specific here
+      if (res.messages && res.messages.length > 0) {
         // TODO: we should not need to set this manually
-          cell.status = ANALYSED
-          graph.addErrors(id, res.messages.map(err => {
+        cell.status = ANALYSED
+        graph.addErrors(id, res.messages.map(err => {
+          console.error(err)
+          if (err instanceof CellError) {
+            return err
+          } else {
             return new SyntaxError(err.message)
-          }))
-        }
-        // console.log('analysed cell', cell, res)
+          }
+        }))
+      }
+      // console.log('analysed cell', cell, res)
+      let inputs = new Set()
+      let output = null
+      if (res.inputs.size > 0 || res.outputs.length > 0) {
         // transform the extracted symbols into fully-qualified symbols
         // e.g. in `x` in `sheet1` is compiled into `sheet1.x`
         // Note: to make the app more robust we are doing this in
         //   a try catch block, and create a rather unspecifc SyntaxError.
         //   This can happen when the transpiled code is not producing
         //   a syntax error but not producing expected input symbols.
-        let inputs = new Set()
-        let output = null
         try {
           ({ inputs, output } = this._compileSymbols(res, cell))
         } catch (error) {
+          console.error(error)
           cell.status = ANALYSED
           graph.addErrors(id, [new SyntaxError('Invalid syntax')])
         }
-        this._setAction(id, {
-          type: 'register',
-          id,
-          // Note: these symbols are in plain-text analysed by the context
-          // based on the transpiled source
-          inputs,
-          output
-        })
+      }
+      this._setAction(id, {
+        type: 'register',
+        id,
+        // Note: these symbols are in plain-text analysed by the context
+        // based on the transpiled source
+        inputs,
+        output
       })
+    })
   }
 
   _evaluate (action) {
@@ -459,60 +379,40 @@ export default class Engine extends EventEmitter {
     let transpiledSource = cell.transpiledSource
     // EXPERIMENTAL: remove 'autorun' so that the cell is not updated forever
     delete cell.autorun
-    return this._getContext(lang)
-      .then(res => {
-        if (this._isSuperseded(id, action)) {
-        // console.log('action has been superseded')
-          return
-        }
-        if (res instanceof Error) {
-          const msg = `Could not get context for ${lang}`
-          console.error(msg)
-          let err = new ContextError(msg, { lang })
-          graph.addError(id, err)
-        } else {
-          const context = res
-          // console.log('EXECUTING cell', cell.id, transpiledSource)
-          // Catching errors here and turn them into a runtime error
-          try {
-            let inputs = this._getInputValues(cell.inputs)
-            let outputs = []
-            if (cell.output) outputs.push({name: cell.output.name})
-            return context.execute({
-              id: cell.id,
-              expr: isExpr,
-              code: transpiledSource,
-              inputs,
-              outputs
-            }).catch(err => {
-              console.error(err)
-              graph.addError(id, new RuntimeError(err.message, err))
-            })
-          } catch (err) {
-            console.error(err)
-            graph.addError(id, new RuntimeError(err.message, err))
-          }
-        }
-      })
-      .then(res => {
-        if (this._isSuperseded(id, action)) {
-        // console.log('action has been superseded')
-          return
-        }
-        this._currentActions.delete(id)
-        // stop if this was aboreted or there is already a new action for this id
-        if (res) {
-          let value
-          let output = res.outputs[0]
-          if (output) value = output.value
-          this._setAction(id, {
-            type: 'update',
-            id,
-            errors: res.messages,
-            value
-          })
-        }
-      })
+    // prepare inputs
+    let inputs = this._getInputValues(cell.inputs)
+    let outputs = []
+    if (cell.output) outputs.push({name: cell.output.name})
+    // execute
+    return this.context.execute({
+      id: cell.id,
+      lang,
+      expr: isExpr,
+      code: transpiledSource,
+      inputs,
+      outputs
+    }).then(res => {
+      if (this._isSuperseded(id, action)) {
+      // console.log('action has been superseded')
+        return
+      }
+      this._currentActions.delete(id)
+      // stop if this was aboreted or there is already a new action for this id
+      if (res) {
+        let value
+        let output = res.outputs[0]
+        if (output) value = output.value
+        this._setAction(id, {
+          type: 'update',
+          id,
+          errors: res.messages,
+          value
+        })
+      }
+    }).catch(err => {
+      console.error(err)
+      graph.addError(id, new RuntimeError(err.message, err))
+    })
   }
 
   _compileSymbols (res, cell) {
@@ -600,25 +500,6 @@ export default class Engine extends EventEmitter {
       result.set(s.mangledStr, val)
     }
     return result
-  }
-
-  _getContext (lang) {
-    // TODO: it should not be the responsibility of the Engine to create contexts.
-    // Thus, even if the host caches the context, this is the wrong semantics.
-    // IMO the host should use a proxy that dispatches requests to real contexts
-    // The connection to the proxy should be established from the beginning.
-    // The proxy could spawn contexts on demand.
-    // Reconfiguration (i.e. adding/removing/changing a context) can be done in one
-    // asychronous update.
-    // Thus, getting the context should be a synchronous method.
-    // return this._host.createContext(lang)
-
-    let context = this._host.getContext(lang)
-    if (context) {
-      return Promise.resolve(context)
-    } else {
-      return Promise.resolve(new Error(`No context available for language ${lang}`))
-    }
   }
 
   _lookupDocumentId (name) {
@@ -711,12 +592,8 @@ function getCellValue (cell) {
 }
 
 function _getArrayValueForCells (cells) {
-  // TODO: we should try to decouple this implementation from
-  // the rest of the application.
-  // this is related to the Stencila's type system
-  // Either, the engine is strongly coupled to the type system
-  // or we need to introduce an abstraction.
-  return gather('array', cells.map(c => getCellValue(c)))
+  let arr = cells.map(c => getCellValue(c))
+  return coerceArray(arr)
 }
 
 /*
