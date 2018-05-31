@@ -18,7 +18,8 @@ export default function transpile (code, map = {}) {
     const s = symbols[i]
     code = code.substring(0, s.startPos) + s.mangledStr + code.slice(s.endPos)
     let transpiledName = s.mangledStr
-    map[transpiledName] = s
+    let key = transpiledName.trim()
+    map[key] = s
   }
   return code
 }
