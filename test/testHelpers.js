@@ -138,23 +138,16 @@ export function queryValues (engine, expr) {
   done at once.
 */
 export function cycle (engine) {
-  return engine._runCycle()
+  console.error('DEPRECATED: use engine.cycle() instead')
+  return engine.cycle()
 }
 
 /*
   Triggers a cycle as long as next actions are coming in.
 */
 export function play (engine) {
-  return new Promise((resolve) => {
-    function step () {
-      if (engine._needsUpdate()) {
-        engine._runCycle().then(step)
-      } else {
-        resolve()
-      }
-    }
-    step()
-  })
+  console.error('DEPRECATED: use engine.runOnce() instead')
+  return engine.runOnce()
 }
 
 export function setSheetSelection (sheetSession, expr) {

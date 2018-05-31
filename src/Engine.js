@@ -53,7 +53,7 @@ export default class Engine extends EventEmitter {
     return new Promise(resolve => {
       function step () {
         if (self._needsUpdate()) {
-          self._runCycle().then(step)
+          self.cycle().then(step)
         } else {
           resolve()
         }
@@ -62,8 +62,8 @@ export default class Engine extends EventEmitter {
     })
   }
 
-  _runCycle () {
-    return Promise.all(this.cycle())
+  cycle () {
+    return Promise.all(this._cycle())
   }
 
   _needsUpdate () {
@@ -85,7 +85,7 @@ export default class Engine extends EventEmitter {
     }
     this._runner = setInterval(() => {
       if (this.needsUpdate()) {
-        this.cycle()
+        this._cycle()
       }
     }, refreshInterval)
   }
@@ -137,7 +137,7 @@ export default class Engine extends EventEmitter {
     return this._nextActions.size > 0 || this._graph.needsUpdate()
   }
 
-  cycle () {
+  _cycle () {
     let res = []
     const graph = this._graph
     const nextActions = this._nextActions
