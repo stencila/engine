@@ -55,11 +55,7 @@ const sum_ = {
   methods: {
     default: {
       params: [
-        { name: 'a', type: 'number' },
-        { name: 'b', type: 'number' },
-        { name: 'c', type: 'number' },
-        { name: 'd', type: 'number' },
-        { name: 'e', type: 'number' }
+        { name: 'val', type: 'number', 'repeats': true }
       ]
     }
   },

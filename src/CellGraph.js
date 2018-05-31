@@ -4,7 +4,7 @@ import {
 } from './CellErrors'
 import {
   UNKNOWN, ANALYSED, BROKEN, FAILED, BLOCKED, WAITING, READY, RUNNING, OK,
-  toInteger
+  cellStateToInteger
 } from './CellStates'
 
 const MSG_UNRESOLVED_INPUT = 'Unresolved input.'
@@ -13,6 +13,8 @@ export default class CellGraph {
   constructor () {
     // cell data by id
     this._cells = {}
+    // a map of names to values that are global
+    this._globals = new Map()
     // symbols -> cell ids; which cell is depending on a symbol
     this._ins = {}
     // symbol -> cell id; which symbol is provided by which cell
@@ -322,7 +324,9 @@ export default class CellGraph {
     let cell = this._cells[id]
     // detect unresolvable inputs
     let inputs = Array.from(cell.inputs)
-    let unresolved = inputs.filter(s => !this._resolve(s))
+    let unresolved = inputs.filter(s => {
+      return !this._resolve(s) && !this._globals.has(s.name)
+    })
     if (unresolved.length > 0) {
       cell.clearErrors(e => e instanceof UnresolvedInputError)
       cell.addErrors([new UnresolvedInputError(MSG_UNRESOLVED_INPUT, { unresolved })])
@@ -459,27 +463,27 @@ export default class CellGraph {
         let _cell = this._cells[res]
         // NOTE: for development we kept the less performant but more readable
         // representation as symbols, instead of ints
-        inputStates.push(toInteger(_cell.status))
+        inputStates.push(cellStateToInteger(_cell.status))
       } else {
         res.forEach(id => {
           let _cell = this._cells[id]
-          inputStates.push(toInteger(_cell.status))
+          inputStates.push(cellStateToInteger(_cell.status))
         })
       }
     })
     if (cell.hasSideEffects && cell.prev) {
       let _cell = this._cells[cell.prev]
       if (_cell) {
-        inputStates.push(toInteger(_cell.status))
+        inputStates.push(cellStateToInteger(_cell.status))
       }
     }
     let inputState = Math.min(...inputStates)
     // Note: it is easier to do this in an arithmetic way
     // than in boolean logic
     let newState
-    if (inputState <= toInteger(BLOCKED)) {
+    if (inputState <= cellStateToInteger(BLOCKED)) {
       newState = BLOCKED
-    } else if (inputState <= toInteger(RUNNING)) {
+    } else if (inputState <= cellStateToInteger(RUNNING)) {
       newState = WAITING
     } else { // if (inputState === OK) {
       newState = READY

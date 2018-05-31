@@ -1,12 +1,12 @@
 import test from 'tape'
 import { isArray, tableHelpers } from 'substance'
+import { JavascriptContext } from 'stencila-js'
 import Engine from '../src/Engine'
-import { toString as cellStateToString } from '../src/CellStates'
-import SimpleHost from '../src/SimpleHost'
+import { cellStateToString } from '../src/CellStates'
 import MiniContext from '../src/MiniContext'
-import JsContext from '../src/JsContext'
 import { parseSymbol } from '../src/engineHelpers'
 import { libtest } from './libtest'
+import TestContext from './TestContext'
 
 const { getRowCol, getIndexesFromRange, getRangeFromMatrix } = tableHelpers
 
@@ -26,44 +26,38 @@ export function testAsync (name, func) {
 }
 
 export function setupEngine () {
-  let host = new TestHost()
-  host.configure({
+  let context = new TestContext()
+  context.configure({
     contexts: [
-      { lang: 'mini', client: MiniContext },
-      { lang: 'js', client: JsContext }
+      { id: 'mickey', lang: 'mini', client: MiniContext },
+      { id: 'goofy', lang: 'js', client: JavascriptContext }
     ]
   })
-  let jsContext = host.getContext('js')
+  let jsContext = context.getLanguageContext('js')
   jsContext.importLibrary(libtest)
-  // TODO: the functionManager will be removed once we treat functions as values
-  let functionManager = host._functionManager
-  functionManager.importLibrary(jsContext, libtest)
 
-  let engine = new Engine({ host })
+  let engine = new Engine(context)
+  // EXPERIMENTAL: register all library content as globals
+  let names = Object.keys(libtest.funcs)
+  names.forEach(name => {
+    // TODO: do we want that extra level here?
+    // need to discuss if the function type could
+    // be simplified
+    engine._addGlobal(name, {
+      type: 'function',
+      value: {
+        type: 'function',
+        data: {
+          name,
+          library: libtest.name,
+          context: jsContext.id
+        }
+      }
+    })
+  })
+
   let graph = engine._graph
-  // don't let the engine be run forever in tests
-  engine.run = () => {}
-  return { host, engine, graph }
-}
-
-class TestHost extends SimpleHost {
-  constructor () {
-    super()
-
-    this._disabled = false
-  }
-
-  _disable (val) {
-    this._disabled = val
-  }
-
-  getContext (name) {
-    if (this._disabled) {
-      return undefined
-    } else {
-      return super.getContext(name)
-    }
-  }
+  return { engine, context, graph }
 }
 
 export function getValue (cell) {
@@ -144,23 +138,16 @@ export function queryValues (engine, expr) {
   done at once.
 */
 export function cycle (engine) {
-  return engine._runCycle()
+  console.error('DEPRECATED: use engine.cycle() instead')
+  return engine.cycle()
 }
 
 /*
   Triggers a cycle as long as next actions are coming in.
 */
 export function play (engine) {
-  return new Promise((resolve) => {
-    function step () {
-      if (engine._needsUpdate()) {
-        engine._runCycle().then(step)
-      } else {
-        resolve()
-      }
-    }
-    step()
-  })
+  console.error('DEPRECATED: use engine.runOnce() instead')
+  return engine.runOnce()
 }
 
 export function setSheetSelection (sheetSession, expr) {

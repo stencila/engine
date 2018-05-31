@@ -3,7 +3,7 @@ import test from 'tape'
 import CellGraph from '../src/CellGraph'
 import Cell from '../src/Cell'
 import { SyntaxError, RuntimeError, ContextError } from '../src/CellErrors'
-import { UNKNOWN, ANALYSED, BROKEN, BLOCKED, WAITING, READY, OK, FAILED, toString } from '../src/CellStates'
+import { UNKNOWN, ANALYSED, BROKEN, BLOCKED, WAITING, READY, OK, FAILED } from '../src/CellStates'
 
 /*
  add a single cell with no deps

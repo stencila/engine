@@ -1,6 +1,11 @@
+// TODO: apart from the dependency to the type system this is pretty independent now
+// With stencilas type system extracted into its own repo
+// we could move this class into stencile-mini, which would be more consistent
+// with other context implementations.
 import { parse } from 'stencila-mini'
-import { tableHelpers } from 'substance'
-import { gather } from './engineHelpers'
+import { coerceArray } from './types'
+
+const INPUT_TYPES = new Set(['var', 'call'])
 
 export default class MiniContext {
   constructor (host) {
@@ -11,74 +16,35 @@ export default class MiniContext {
     return Promise.resolve(language === 'mini')
   }
 
-  analyseCode (code, exprOnly = false) {
-    return Promise.resolve(this._analyseCode(code, exprOnly))
+  async compile (cell) {
+    return this._compile(cell)
   }
 
-  executeCode (code = '', inputs = {}, exprOnly = false) {
-    let codeAnalysis = this._analyseCode(code, exprOnly)
-    if (codeAnalysis.expr) {
-      return this._evaluateExpression(codeAnalysis, inputs)
-    }
-    return Promise.resolve(codeAnalysis)
+  async execute (cell) {
+    return this._execute(cell)
   }
 
-  /*
-    Call a Mini function
-
-    This gets called when evaluating a function call node within a Mini expression
-
-  */
-  callFunction (funcCall) {
-    const functionManager = this._host.getFunctionManager()
-    // TODO: change the signature of this by doing all mini AST related preparations before-hand
-    const functionName = funcCall.name
-
-    // Ensure the function exists
-    let funcDoc = functionManager.getFunction(functionName)
-    if (!funcDoc) {
-      return _error(`Could not find function "${functionName}"`)
-    }
-
-    // Get a context for the implementation language
-    let {context, library} = functionManager.getContextLibrary(functionName)
-    // Call the function implementation in the context, capturing any
-    // messages or returning the value
-    let args = funcCall.args.map(arg => arg.getValue())
-    let namedArgs = {}
-    for (let namedArg of funcCall.namedArgs) {
-      namedArgs[namedArg.name] = namedArg.getValue()
-    }
-    return context.callFunction(library, functionName, args, namedArgs).then((res) => {
-      if (res.messages && res.messages.length > 0) {
-        funcCall.addErrors(res.messages)
-        return undefined
-      }
-      return res.value
-    })
-
-    function _error (msg) {
-      console.error(msg)
-      funcCall.addErrors([{
-        type: 'error',
-        message: msg
-      }])
-      return new Error(msg)
-    }
+  // called during evaluation of mini expressions
+  async _callFunction (funcNode, args, namedArgs) {
+    return this._host.callFunction(funcNode, args, namedArgs)
   }
 
-  _analyseCode (code) {
+  _compile (cell) {
+    const code = cell.code
     if (!code) {
-      return {
+      Object.assign(cell, {
         inputs: [],
-        output: undefined,
+        outputs: [],
         messages: [],
         tokens: [],
         nodes: []
-      }
+      })
+      return cell
     }
     let expr = parse(code)
-    let inputs, output, tokens, nodes
+    let inputs = new Map()
+    let outputs = []
+    let tokens, nodes
     let messages = []
     if (expr.syntaxError) {
       messages.push({
@@ -86,15 +52,16 @@ export default class MiniContext {
         message: expr.syntaxError.msg
       })
     }
-    if (expr.inputs) {
-      inputs = expr.inputs.map(node => {
-        // TODO: instead of interpreting the symbols
-        // the mini parser should just return the symbol
-        return node.name
-      })
-    }
+    // EXPERIMENTAL: adding function calls to the inputs
+    expr.nodes.forEach(n => {
+      if (INPUT_TYPES.has(n.type)) {
+        const name = n.name
+        inputs.set(name, {name})
+      }
+    })
     if (expr.name) {
-      output = expr.name
+      const name = expr.name
+      outputs.push({name})
     }
     if (expr.tokens) {
       // some tokens are used for code highlighting
@@ -128,90 +95,63 @@ export default class MiniContext {
       }
     })
 
-    return {
-      expr,
+    Object.assign(cell, {
+      type: 'cell',
+      code,
       inputs,
-      output,
+      outputs,
       messages,
       tokens,
-      nodes
-    }
+      nodes,
+      _expr: expr
+    })
+    return cell
   }
 
-  _evaluateExpression (res, values) {
-    let expr = res.expr
+  async _execute (cell) {
+    let expr = cell._expr || parse(cell.code)
+    // don't evaluate the expression in presence of an syntax error
     if (expr.syntaxError) {
-      return Promise.resolve(res)
+      return Promise.resolve(cell)
     }
-    return new Promise((resolve) => {
-      expr.on('evaluation:finished', (val) => {
-        expr.off('evaluation:finished')
-        let errors = expr.root.errors
-        if (errors && errors.length > 0) {
-          res.messages = errors
-          res.value = undefined
-        } else {
-          res.value = val
-        }
-        resolve(res)
-      })
-      expr.context = new ExprContext(this, values)
-      expr.propagate()
-    })
+    const outputName = expr.name
+    let adapter = new _MiniContextAdapter(this, cell.inputs)
+    let value = await expr.evaluate(adapter)
+    if (adapter.messages.length > 0) {
+      cell.messages = adapter.messages
+    }
+    // HACK: Mini allows only one output
+    let output = {value}
+    if (outputName) {
+      output.name = outputName
+    }
+    cell.outputs = [output]
+    return cell
   }
 }
 
-/*
-  This is passed as a context to a MiniExpression to resolve external symbols
-  and for marshalling.
-*/
-class ExprContext {
-  constructor (parentContext, values) {
-    this.parentContext = parentContext
-    this.values = values
+// an adapter between mini and the context
+// used to provide data, and
+class _MiniContextAdapter {
+  constructor (miniContext, inputs) {
+    this.miniContext = miniContext
+    this.inputs = inputs
+    this.messages = []
   }
 
-  lookup (symbol) {
-    switch (symbol.type) {
-      case 'var': {
-        return this.values[symbol.name]
-      }
-      case 'cell': {
-        // TODO: would be good to have the symbol name stored in the symbol
-        let name = tableHelpers.getCellLabel(symbol.row, symbol.col)
-        return this.values[name]
-      }
-      case 'range': {
-        // TODO: would be good to have the symbol name stored in the symbol
-        let startName = tableHelpers.getCellLabel(symbol.startRow, symbol.startCol)
-        let endName = tableHelpers.getCellLabel(symbol.endRow, symbol.endCol)
-        return this.values[`${startName}_${endName}`]
-      }
-      default:
-        throw new Error('Invalid state')
-    }
+  resolve (name) {
+    return this.inputs.get(name)
   }
 
-  // used to create Stencila Values
-  // such as { type: 'number', data: 5 }
-  // TODO: coerce arrays,
-  marshal (type, value) {
-    // TODO: maybe there are more cases where we want to
-    // cast the type according to the value
+  // coerce and pack
+  pack (value, type) {
     switch (type) {
-      case 'number': {
-        return {
-          type: 'number',
-          data: value
-        }
-      }
       case 'array': {
-        return gather('array', value)
+        return coerceArray(value)
       }
       case 'range': {
-        // TODO: the API is bit inconsistent here
-        // range already have a correct type because
-        // they are gathered by the engine
+        // FIXME: the API is a bit inconsistent here.
+        // range are packed by the engine
         return value
       }
       default:
@@ -222,7 +162,7 @@ class ExprContext {
     }
   }
 
-  unmarshal (val) {
+  unpack (val) {
     // TODO: better understand if it is ok to make this robust
     // by guarding undefined values, and not obfuscating an error occurring elsewhere
     // it happened whenever undefined is returned by a called function
@@ -230,7 +170,11 @@ class ExprContext {
     return val.data
   }
 
-  callFunction (funcCall) {
-    return this.parentContext.callFunction(funcCall)
+  async callFunction (name, args, namedArgs) {
+    let func = this.inputs.get(name)
+    if (!func) throw new Error('Function not provided.')
+    let res = await this.miniContext._callFunction(func, args, namedArgs)
+    this.messages.concat(res.messages)
+    return res.value
   }
 }
