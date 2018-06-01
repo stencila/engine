@@ -1,4 +1,5 @@
 import { ContextError } from './CellErrors'
+import { pack, unpack } from './types'
 
 export default class CompositeContext {
   constructor () {
@@ -20,6 +21,11 @@ export default class CompositeContext {
     })
     this._contexts = contexts
     this._lang2context = lang2context
+
+    config.libraries.forEach(({lang, lib}) => {
+      let langContext = this.getLanguageContext(lang)
+      langContext.importLibrary(lib)
+    })
   }
 
   getLanguageContext (lang) {
@@ -75,5 +81,13 @@ export default class CompositeContext {
       namedArgs
     }
     return context.evaluateCall(call)
+  }
+
+  pack (value, options) {
+    return pack(value, options)
+  }
+
+  unpack (pkg) {
+    return unpack(pkg)
   }
 }

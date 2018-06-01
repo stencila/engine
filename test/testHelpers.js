@@ -31,13 +31,14 @@ export function setupEngine () {
     contexts: [
       { id: 'mickey', lang: 'mini', client: MiniContext },
       { id: 'goofy', lang: 'js', client: JavascriptContext }
+    ],
+    libraries: [
+      { lang: 'js', lib: libtest }
     ]
   })
-  let jsContext = context.getLanguageContext('js')
-  jsContext.importLibrary(libtest)
-
   let engine = new Engine(context)
   // EXPERIMENTAL: register all library content as globals
+  let jsContext = context.getLanguageContext('js')
   let names = Object.keys(libtest.funcs)
   names.forEach(name => {
     // TODO: do we want that extra level here?
