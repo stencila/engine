@@ -12,8 +12,8 @@ export default class MiniContext {
     this._host = host
   }
 
-  supportsLanguage (language) {
-    return Promise.resolve(language === 'mini')
+  get id () {
+    return 'mini'
   }
 
   async compile (cell) {
