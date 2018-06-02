@@ -1,4 +1,4 @@
-import { isString, EventEmitter, flatten, forEach, tableHelpers } from 'substance'
+import { platform, isString, EventEmitter, flatten, forEach, tableHelpers } from 'substance'
 import { CellError, RuntimeError, SyntaxError } from './CellErrors'
 import { UNKNOWN, ANALYSED, READY, cellStateToInteger } from './CellStates'
 import CellSymbol from './CellSymbol'
@@ -382,15 +382,18 @@ export default class Engine extends EventEmitter {
     // prepare inputs
     let inputs = this._getInputValues(cell.inputs)
     let outputs = []
-    if (cell.output) outputs.push({name: cell.output.name})
+    if (cell.output) {
+      outputs.push({name: cell.output})
+    }
     // execute
-    return this.context.execute({
+    let p = this.context.execute({
       id: cell.id,
       lang,
       expr: isExpr,
       code: transpiledSource,
       inputs,
-      outputs
+      outputs,
+      messages: []
     }).then(res => {
       if (this._isSuperseded(id, action)) {
       // console.log('action has been superseded')
@@ -409,10 +412,16 @@ export default class Engine extends EventEmitter {
           value
         })
       }
-    }).catch(err => {
-      console.error(err)
-      graph.addError(id, new RuntimeError(err.message, err))
     })
+    // only when console is closed catch any exception
+    if (!platform.devtools) {
+      return p.catch(err => {
+        console.error(err)
+        graph.addError(id, new RuntimeError('Internal error', err))
+      })
+    } else {
+      return p
+    }
   }
 
   _compileSymbols (res, cell) {

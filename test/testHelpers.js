@@ -39,6 +39,7 @@ export function setupEngine () {
   let engine = new Engine(context)
   // EXPERIMENTAL: register all library content as globals
   let jsContext = context.getLanguageContext('js')
+  let miniContext = context.getLanguageContext('mini')
   let names = Object.keys(libtest.funcs)
   names.forEach(name => {
     // TODO: do we want that extra level here?
@@ -58,7 +59,7 @@ export function setupEngine () {
   })
 
   let graph = engine._graph
-  return { engine, context, graph }
+  return { engine, context, graph, miniContext, jsContext }
 }
 
 export function getValue (cell) {
