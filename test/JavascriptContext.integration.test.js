@@ -2,7 +2,7 @@ import {
   testAsync, setupEngine, getValues, getStates
 } from './testHelpers'
 
-testAsync('JavascriptContext Integration: compile(x=5)', async t => {
+testAsync('JavascriptContext Integration: two consecutive cells', async t => {
   let { engine } = setupEngine()
   let doc = engine.addDocument({
     id: 'doc1',

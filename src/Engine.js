@@ -310,6 +310,7 @@ export default class Engine extends EventEmitter {
     const isExpr = cell.isSheetCell()
     const transpiledSource = cell.transpiledSource
     return this.context.compile({
+      id: cell.id,
       code: transpiledSource,
       lang,
       expr: isExpr
@@ -319,8 +320,11 @@ export default class Engine extends EventEmitter {
         return
       }
       this._currentActions.delete(id)
-      // stop if this was aboreted or there is already a new action for this id
-      if (!res) return
+      // storing the cell representation of the context
+      cell.data = res
+      // make sure that the cell id is set
+      res.id = id
+
       // Note: treating all errors coming from analyseCode() as SyntaxErrors
       // TODO: we might want to be more specific here
       if (res.messages && res.messages.length > 0) {
@@ -336,9 +340,11 @@ export default class Engine extends EventEmitter {
         }))
       }
       // console.log('analysed cell', cell, res)
+
+      // mapping the result from the context to the engine's internal format
       let inputs = new Set()
       let output = null
-      if (res.inputs.size > 0 || res.outputs.length > 0) {
+      if (res.inputs.length > 0 || res.outputs.length > 0) {
         // transform the extracted symbols into fully-qualified symbols
         // e.g. in `x` in `sheet1` is compiled into `sheet1.x`
         // Note: to make the app more robust we are doing this in
@@ -373,45 +379,27 @@ export default class Engine extends EventEmitter {
     })
     // console.log('evaluating cell', cell.toString())
     this._currentActions.set(id, action)
-
-    const lang = cell.getLang()
-    const isExpr = cell.isSheetCell()
-    let transpiledSource = cell.transpiledSource
     // EXPERIMENTAL: remove 'autorun' so that the cell is not updated forever
     delete cell.autorun
-    // prepare inputs
-    let inputs = this._getInputValues(cell.inputs)
-    let outputs = []
-    if (cell.output) {
-      outputs.push({name: cell.output})
-    }
+    // prepare inputs for the context
+    let data = cell.data
+    data.inputs = this._getInputValues(cell.inputs)
     // execute
-    let p = this.context.execute({
-      id: cell.id,
-      lang,
-      expr: isExpr,
-      code: transpiledSource,
-      inputs,
-      outputs,
-      messages: []
-    }).then(res => {
+    let p = this.context.execute(data).then(res => {
       if (this._isSuperseded(id, action)) {
       // console.log('action has been superseded')
         return
       }
       this._currentActions.delete(id)
-      // stop if this was aboreted or there is already a new action for this id
-      if (res) {
-        let value
-        let output = res.outputs[0]
-        if (output) value = output.value
-        this._setAction(id, {
-          type: 'update',
-          id,
-          errors: res.messages,
-          value
-        })
-      }
+      let value
+      let output = res.outputs[0]
+      if (output) value = output.value
+      this._setAction(id, {
+        type: 'update',
+        id,
+        errors: res.messages,
+        value
+      })
     })
     // only when console is closed catch any exception
     if (!platform.devtools) {
@@ -482,7 +470,7 @@ export default class Engine extends EventEmitter {
   */
   _getInputValues (inputs) {
     const graph = this._graph
-    let result = new Map()
+    let result = []
     for (let s of inputs) {
       let val
       switch (s.type) {
@@ -506,7 +494,7 @@ export default class Engine extends EventEmitter {
       }
       // Note: the transpiled source code is used for evaluation
       // thus we expose values via transpiled/mangled names here
-      result.set(s.mangledStr, val)
+      result.push({ name: s.mangledStr, value: val })
     }
     return result
   }

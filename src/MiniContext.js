@@ -42,7 +42,7 @@ export default class MiniContext {
       return cell
     }
     let expr = parse(code)
-    let inputs = new Map()
+    let inputs = []
     let outputs = []
     let tokens, nodes
     let messages = []
@@ -56,7 +56,7 @@ export default class MiniContext {
     expr.nodes.forEach(n => {
       if (INPUT_TYPES.has(n.type)) {
         const name = n.name
-        inputs.set(name, {name})
+        inputs.push({name})
       }
     })
     if (expr.name) {
@@ -135,7 +135,9 @@ export default class MiniContext {
 class _MiniContextAdapter {
   constructor (miniContext, inputs) {
     this.miniContext = miniContext
-    this.inputs = inputs
+    let _inputs = new Map()
+    inputs.forEach(i => _inputs.set(i.name, i))
+    this.inputs = _inputs
     this.messages = []
   }
 
