@@ -47,13 +47,10 @@ export function setupEngine () {
     // be simplified
     engine._addGlobal(name, {
       type: 'function',
-      value: {
-        type: 'function',
-        data: {
-          name,
-          library: libtest.name,
-          context: jsContext.id
-        }
+      data: {
+        name,
+        library: libtest.name,
+        context: jsContext.id
       }
     })
   })

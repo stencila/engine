@@ -3,7 +3,7 @@
 // we could move this class into stencile-mini, which would be more consistent
 // with other context implementations.
 import { parse } from 'stencila-mini'
-import { coerceArray } from './types'
+import { coerceArray, pack } from './types'
 
 const INPUT_TYPES = new Set(['var', 'call'])
 
@@ -52,11 +52,15 @@ export default class MiniContext {
         message: expr.syntaxError.msg
       })
     }
-    // EXPERIMENTAL: adding function calls to the inputs
+    const _inputs = new Set()
     expr.nodes.forEach(n => {
       if (INPUT_TYPES.has(n.type)) {
         const name = n.name
-        inputs.push({name})
+        // making sure that inputs are not added twice
+        if (!_inputs.has(name)) {
+          inputs.push({name})
+          _inputs.add(name)
+        }
       }
     })
     if (expr.name) {
@@ -136,7 +140,7 @@ class _MiniContextAdapter {
   constructor (miniContext, inputs) {
     this.miniContext = miniContext
     let _inputs = new Map()
-    inputs.forEach(i => _inputs.set(i.name, i))
+    inputs.forEach(i => _inputs.set(i.name, i.value))
     this.inputs = _inputs
     this.messages = []
   }
@@ -146,22 +150,11 @@ class _MiniContextAdapter {
   }
 
   // coerce and pack
-  pack (value, type) {
-    switch (type) {
-      case 'array': {
-        return coerceArray(value)
-      }
-      case 'range': {
-        // FIXME: the API is a bit inconsistent here.
-        // range are packed by the engine
-        return value
-      }
-      default:
-        return {
-          type,
-          data: value
-        }
+  pack (value, ctx) {
+    if (ctx === 'array') {
+      return coerceArray(value)
     }
+    return pack(value)
   }
 
   unpack (val) {
@@ -174,7 +167,9 @@ class _MiniContextAdapter {
 
   async callFunction (name, args, namedArgs) {
     let func = this.inputs.get(name)
-    if (!func) throw new Error('Function not provided.')
+    if (!func) {
+      throw new Error('Function not provided.')
+    }
     let res = await this.miniContext._callFunction(func, args, namedArgs)
     this.messages.concat(res.messages)
     return res.value

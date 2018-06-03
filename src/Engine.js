@@ -343,21 +343,23 @@ export default class Engine extends EventEmitter {
 
       // mapping the result from the context to the engine's internal format
       let inputs = new Set()
+      // TODO: at some point we want to allow for multiple outputs
       let output = null
       if (res.inputs.length > 0 || res.outputs.length > 0) {
         // transform the extracted symbols into fully-qualified symbols
         // e.g. in `x` in `sheet1` is compiled into `sheet1.x`
-        // Note: to make the app more robust we are doing this in
-        //   a try catch block, and create a rather unspecifc SyntaxError.
-        //   This can happen when the transpiled code is not producing
-        //   a syntax error but not producing expected input symbols.
-        try {
-          ({ inputs, output } = this._compileSymbols(res, cell))
-        } catch (error) {
-          console.error(error)
-          cell.status = ANALYSED
-          graph.addErrors(id, [new SyntaxError('Invalid syntax')])
-        }
+        // At this point symbols are bound to a specific scope
+        ({ inputs, output } = this._compileSymbols(res, cell))
+
+        // TODO: this was originally here to make the app more robust
+        // but trying to get rid it
+        // try {
+        //   ({ inputs, output } = this._compileSymbols(res, cell))
+        // } catch (error) {
+        //   console.error(error)
+        //   cell.status = ANALYSED
+        //   graph.addErrors(id, [new SyntaxError('Invalid syntax')])
+        // }
       }
       this._setAction(id, {
         type: 'register',
@@ -383,6 +385,7 @@ export default class Engine extends EventEmitter {
     delete cell.autorun
     // prepare inputs for the context
     let data = cell.data
+    // mapping inputs into the cell format for the context
     data.inputs = this._getInputValues(cell.inputs)
     // execute
     let p = this.context.execute(data).then(res => {
@@ -421,17 +424,17 @@ export default class Engine extends EventEmitter {
     // Let's wait for it to happen where this is not the case
     res.inputs.forEach(input => {
       let name = input.name
-      if (isString(input)) name = input
-      // Note: during transpilation we identify some more symbols
-      // which are actually not real variables
-      // e.g. for `sum(A1:B10)` would detect 'sum' as a potential variable
-      // due to the lack of language reflection at this point.
+      // HACK
+      // TODO: when do we need this?
+      if (isString(input)) {
+        console.error('FIXME: input is in an unexpected format')
+        name = input
+      }
       let symbol = symbolMapping[name]
-      // some symbols can occur which are not tracked by us
-      // e.g. in Mini the '+' operator is implemented via cakk to 'add()'
+      // Note: the engine does not track function names as symbols
+      // which are returned as input
+      // in this case we create a locally bound symbol
       if (!symbol) {
-        // HACK
-        // in this case we create a symbol that points to the local scope
         symbol = new CellSymbol({
           type: 'var',
           name,

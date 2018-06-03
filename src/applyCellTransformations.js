@@ -4,7 +4,7 @@ import qualifiedId from './qualifiedId'
 import toIdentifier from './toIdentifier'
 
 export default function applyCellTransformations (cell) {
-  let symbols = Array.from(cell.inputs).sort((a, b) => a.startPos - b.startPos)
+  let symbols = cell.symbols
   let source = cell._source
   let offset = 0
   for (let i = 0; i < symbols.length; i++) {

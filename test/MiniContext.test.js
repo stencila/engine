@@ -32,6 +32,19 @@ test('MiniContext: compile(foo(x,y,z))', t => {
   t.end()
 })
 
+test('MiniContext: compile(1+2+3)', t => {
+  let mini = new MiniContext()
+  let code = '1+2+3'
+  let actual = mini._compile({ code })
+  let expected = {
+    inputs: [{name: 'add'}],
+    outputs: [],
+    messages: []
+  }
+  _isFulfilled(t, actual, expected)
+  t.end()
+})
+
 testAsync('MiniContext: execute(x=5)', async t => {
   let mini = new MiniContext()
   let code = 'x=5'
@@ -39,7 +52,7 @@ testAsync('MiniContext: execute(x=5)', async t => {
   let actual = await mini.execute(cell)
   let expected = {
     inputs: [],
-    outputs: [{name: 'x', value: {type: 'number', data: 5}}],
+    outputs: [{name: 'x', value: {type: 'integer', data: 5}}],
     messages: []
   }
   _isFulfilled(t, actual, expected)
@@ -53,7 +66,7 @@ testAsync('MiniContext: execute(1+2+3)', async t => {
   _provideLibFunction(cell, 'add')
   let actual = await mini.execute(cell)
   let expected = {
-    outputs: [{value: {type: 'number', data: 6}}],
+    outputs: [{value: {type: 'integer', data: 6}}],
     messages: []
   }
   _isFulfilled(t, actual, expected)
@@ -67,7 +80,7 @@ testAsync('MiniContext: execute(noParams())', async t => {
   _provideLibFunction(cell, 'noParams')
   let actual = await mini.execute(cell)
   let expected = {
-    outputs: [{value: {type: 'number', data: 5}}],
+    outputs: [{value: {type: 'integer', data: 5}}],
     messages: []
   }
   _isFulfilled(t, actual, expected)
@@ -82,7 +95,7 @@ testAsync('MiniContext: execute(noParams() + 1)', async t => {
   _provideLibFunction(cell, 'add')
   let actual = await mini.execute(cell)
   let expected = {
-    outputs: [{value: {type: 'number', data: 6}}],
+    outputs: [{value: {type: 'integer', data: 6}}],
     messages: []
   }
   _isFulfilled(t, actual, expected)
@@ -162,12 +175,11 @@ function _isFulfilled (t, cell, expected) {
 }
 
 function _setInput (cell, name, data) {
-  let input = cell.inputs.get(name)
+  let input = cell.inputs.find(i => i.name === name)
   Object.assign(input, data)
 }
 
 function _provideLibFunction (cell, name) {
-  // EXPERIMENTAL: trying a
   _setInput(cell, name, {
     value: {
       type: 'function',

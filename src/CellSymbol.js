@@ -19,16 +19,15 @@ export default class CellSymbol {
    * @param {string} docId id of the target document where the symbol can be resolved
    * @param {Cell} cell the owner cell which has this symbol as an input dependency
    */
-  constructor ({ type, scope, name, text, mangledStr, startPos, endPos }, targetDocId, cell) {
+  constructor ({ type, scope, name, text, mangledStr }, targetDocId, cell) {
     this.type = type
     this.scope = scope
     this.name = name
     this.docId = targetDocId
     this.id = qualifiedId(targetDocId, name)
+
     this.origStr = text
     this.mangledStr = mangledStr
-    this.startPos = startPos
-    this.endPos = endPos
     this.cell = cell
 
     // these are only set for 'cell' and 'range' symbols
