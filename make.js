@@ -10,7 +10,7 @@ b.task('clean', () => {
 })
 
 b.task('lib:browser', () => {
-  b.js('index.es.js', {
+  b.js('index.js', {
     output: [{
       file: DIST + 'stencila-engine.js',
       format: 'umd',
@@ -29,7 +29,7 @@ b.task('lib:browser', () => {
 })
 
 b.task('lib:node', () => {
-  b.js('index.es.js', {
+  b.js('index.js', {
     output: [{
       file: DIST + 'stencila-engine.cjs.js',
       format: 'cjs'

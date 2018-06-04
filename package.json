@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "The Execution Engine \u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5C\u001b[1;5C\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[ for Stencila Cells.",
   "main": "dist/engine.cjs.js",
-  "jsnext:main": "index.es.js",
+  "jsnext:main": "index.js",
   "directories": {
     "test": "tests"
   },
