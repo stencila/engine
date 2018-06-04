@@ -1,4 +1,5 @@
 const b = require('substance-bundler')
+const path = require('path')
 
 const DIST = 'dist/'
 
@@ -15,7 +16,7 @@ b.task('lib:browser', () => {
       file: DIST + 'stencila-engine.js',
       format: 'umd',
       name: 'stencilaEngine',
-      globals: { 'stencila-js': 'window.stencilaJs' }
+      globals: { 'stencila-js': 'stencilaJs' }
     }],
     external: ['stencila-js'],
     commonjs: {
@@ -42,23 +43,28 @@ b.task('lib:node', () => {
   })
 })
 
-b.task('test:browser', () => {
+b.task('test:browser', ['lib:browser'], () => {
+  const INDEX_JS = path.join(__dirname, 'index.js')
   let globals = {
     'tape': 'substanceTest.test',
     'stencila-libcore': 'stencilaLibcore',
     'stencila-mini': 'stencilaMini',
     'stencila-js': 'stencilaJs',
-    'substance': 'window.substance',
+    'substance': 'substance',
     'substance-test': 'substanceTest'
   }
+  globals[INDEX_JS] = 'stencilaEngine'
   b.js('test/**/*.test.js', {
     output: [{
       file: 'tmp/tests.js',
       format: 'umd',
-      name: 'tests',
+      name: 'stencilaEngineTests',
       globals
     }],
-    external: ['tape', 'stencila-libcore', 'stencila-mini', 'stencila-js', 'substance', 'substance-test'],
+    external: [
+      'tape', 'stencila-libcore', 'stencila-mini', 'stencila-js',
+      'substance', 'substance-test', INDEX_JS
+    ],
     commonjs: {
       namedExports: { 'acorn/dist/walk.js': [ 'simple', 'base' ] }
     },
