@@ -43,19 +43,22 @@ b.task('lib:node', () => {
 })
 
 b.task('test:browser', () => {
+  let globals = {
+    'tape': 'substanceTest.test',
+    'stencila-libcore': 'stencilaLibcore',
+    'stencila-mini': 'stencilaMini',
+    'stencila-js': 'stencilaJs',
+    'substance': 'window.substance',
+    'substance-test': 'substanceTest'
+  }
   b.js('test/**/*.test.js', {
     output: [{
       file: 'tmp/tests.js',
       format: 'umd',
       name: 'tests',
-      globals: {
-        'tape': 'substanceTest.test',
-        'stencila-mini': 'window.stencilaMini',
-        'stencila-js': 'window.stencilaJs',
-        'stencila-libcore': 'window.stencilaLibcore'
-      }
+      globals
     }],
-    external: ['tape', 'stencila-mini', 'stencila-js', 'stencila-libcore'],
+    external: ['tape', 'stencila-libcore', 'stencila-mini', 'stencila-js', 'substance', 'substance-test'],
     commonjs: {
       namedExports: { 'acorn/dist/walk.js': [ 'simple', 'base' ] }
     },

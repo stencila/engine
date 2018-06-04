@@ -77,6 +77,7 @@ export default class Sheet {
   }
 
   insertRows (pos, dataBlock) {
+    const graph = this.engine._graph
     // TODO: what if all columns and all rows had been removed
     const count = dataBlock.length
     if (count === 0) return
@@ -92,7 +93,9 @@ export default class Sheet {
       let row = block[i]
       for (let j = 0; j < row.length; j++) {
         let cell = row[j]
-        if (spans && spans[j]) cell.deps = new Set(spans[j])
+        if (spans[j]) {
+          graph._addDependencies(cell, spans[j])
+        }
       }
     }
     // update sheet structure
@@ -112,6 +115,7 @@ export default class Sheet {
   }
 
   insertCols (pos, dataBlock) {
+    const graph = this.engine._graph
     const nrows = this.cells.length
     if (dataBlock.length !== nrows) throw new Error('Invalid dimensions')
     let count = dataBlock[0].length
@@ -137,7 +141,9 @@ export default class Sheet {
       let row = block[i]
       for (let j = 0; j < row.length; j++) {
         let cell = row[j]
-        if (spans && spans[i]) cell.deps = new Set(spans[i])
+        if (spans[i]) {
+          graph._addDependencies(cell, spans[i])
+        }
       }
     }
     this._registerCells(block)
@@ -162,19 +168,29 @@ export default class Sheet {
 
   rename (newName) {
     if (newName === this.name) return
+    const graph = this.engine._graph
     let cells = this.cells
     let affectedCells = new Set()
     for (let i = 0; i < cells.length; i++) {
       let row = cells[i]
       for (let j = 0; j < row.length; j++) {
         let cell = row[j]
-        cell.deps.forEach(s => {
-          s._update = { type: 'rename', scope: newName }
-          affectedCells.add(s.cell)
+        let deps = graph._sheetCellOuts[cell.id]
+        deps.forEach(dep => {
+          // update all symbols that point to this document
+          dep.symbols.forEach(s => {
+            if (s.scope === this.name) {
+              s._update = { type: 'rename', scope: newName }
+            }
+          })
+          affectedCells.add(dep)
         })
       }
     }
-    affectedCells.forEach(applyCellTransformations)
+    affectedCells.forEach(cell => {
+      applyCellTransformations(cell)
+      this.engine._resetCell(cell)
+    })
     this.name = newName
     this._sendSourceUpdate(affectedCells)
   }
@@ -235,26 +251,21 @@ export default class Sheet {
     block.forEach(row => row.forEach(cell => this._unregisterCell(cell)))
   }
 
-  _removeDep (s) {
+  _getCellsForRange (s) {
     const cells = this.cells
+    let result = new Set()
     for (let i = s.startRow; i <= s.endRow; i++) {
       let row = cells[i]
       for (let j = s.startCol; j <= s.endCol; j++) {
         let cell = row[j]
-        cell.removeDep(s)
+        if (!cell) {
+          console.error('FIXME: SOMETHING IS BROKEN HERE')
+        } else {
+          result.add(cell)
+        }
       }
     }
-  }
-
-  _addDep (s) {
-    const cells = this.cells
-    for (let i = s.startRow; i <= s.endRow; i++) {
-      let row = cells[i]
-      for (let j = s.startCol; j <= s.endCol; j++) {
-        let cell = row[j]
-        cell.addDep(s)
-      }
-    }
+    return result
   }
 
   _sendSourceUpdate (cells) {
@@ -264,6 +275,11 @@ export default class Sheet {
   }
 }
 
+/*
+  Records symbol updates and applies to cells.
+  Additionally determines cells that have a symbol that is spanning
+  over the insertion position.
+s*/
 function transformCells (engine, cells, dim, pos, count, affected) {
   if (count === 0) return
   // track updates for symbols and affected cells
@@ -274,33 +290,41 @@ function transformCells (engine, cells, dim, pos, count, affected) {
   } else {
     startCol = pos
   }
+  const graph = engine._graph
   let visited = new Set()
   for (let i = startRow; i < cells.length; i++) {
     let row = cells[i]
     for (let j = startCol; j < row.length; j++) {
       let cell = row[j]
-      if (cell.deps.size > 0) {
-        recordTransformations(cell, dim, pos, count, affected, visited)
+      let deps = graph._sheetCellOuts[cell.id]
+      if (deps) {
+        recordTransformations(deps, dim, pos, count, affected, visited)
       }
     }
   }
-  let spans = _computeSpans(cells, dim, pos)
+  // NOTE: this seems a bit weird, but this needs to be done before the cell
+  // symbols are changed.
+  let spans = _getCellsWithSpanningSymbols(cells, dim, pos)
   // update the source for all affected cells
-  affected.forEach(applyCellTransformations)
-  // reset state of affected cells
-  // TODO: let this be done by CellGraph, also making sure the cell state is reset properly
-  if (engine) {
-    affected.forEach(cell => {
-      engine._graph._structureChanged.add(cell.id)
-    })
-  }
+  affected.forEach(cell => {
+    applyCellTransformations(cell)
+    if (engine) {
+      engine._resetCell(cell)
+    }
+  })
   return spans
 }
 
-// some symbols are spanning the insert position, and thus need to
-// be added to the deps of inserted cells
-function _computeSpans (cells, dim, pos) {
-  let spans
+/*
+* Some symbols are spanning the insert position. The cells with these
+* symbols need to be added the the dependencies for the inserted cells.
+* This method is only used after symbol updates have been recorded, i.e.
+* stored into `s._update`
+*/
+function _getCellsWithSpanningSymbols (graph, cells, dim, pos) {
+  // Note: it is enough to walk along the row/col where cells are inserted
+  // and investigate their symbols
+  let spans = []
   if (pos > 0) {
     if (cells.length === 0 || cells[0].length === 0) return
     let size = [cells.length, cells[0].length]
@@ -309,14 +333,16 @@ function _computeSpans (cells, dim, pos) {
     let L = dim === 0 ? size[1] : size[0]
     for (let i = 0; i < L; i++) {
       let cell = dim === 0 ? cells[pos][i] : cells[i][pos]
-      let deps = Array.from(cell.deps)
-      for (let j = 0; j < deps.length; j++) {
-        let s = deps[j]
-        let update = s._update
-        if (update && update.start <= pos) {
-          if (!spans) spans = []
-          if (!spans[i]) spans[i] = []
-          spans[i].push(s)
+      let deps = graph._sheetCellIns[cell.id]
+      if (deps) {
+        for (let dep of deps) {
+          for (let s of dep.symbols) {
+            let update = s._update
+            if (update && update.start <= pos) {
+              if (!spans[i]) spans[i] = new Set()
+              spans[i].add(dep)
+            }
+          }
         }
       }
     }

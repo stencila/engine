@@ -1,10 +1,9 @@
-import test from 'tape'
+import { test, testAsync } from 'substance-test'
 import { map } from 'substance'
 import { JavascriptContext } from 'stencila-js'
 import MiniContext from '../src/MiniContext'
 import setupContext from '../src/setupContext'
 import { libtest } from './libtest'
-import { testAsync } from './testHelpers'
 
 test('MiniContext: compile(x=5)', t => {
   let mini = new MiniContext()

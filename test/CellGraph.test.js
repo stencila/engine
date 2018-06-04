@@ -1,5 +1,4 @@
 import test from 'tape'
-
 import CellGraph from '../src/CellGraph'
 import Cell from '../src/Cell'
 import { SyntaxError, RuntimeError, ContextError } from '../src/CellErrors'

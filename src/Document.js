@@ -85,7 +85,10 @@ export default class Document {
         }
       }
     }
-    affectedCells.forEach(applyCellTransformations)
+    affectedCells.forEach(cell => {
+      applyCellTransformations(cell)
+      this.engine._resetCell(cell)
+    })
     this.name = newName
     this._sendSourceUpdate(affectedCells)
   }

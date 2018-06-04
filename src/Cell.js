@@ -1,6 +1,8 @@
-import { isString } from 'substance'
+import { isString, tableHelpers } from 'substance'
 import { UNKNOWN, cellStateToString } from './CellStates'
 import { transpile, isExpression, qualifiedId } from './engineHelpers'
+
+const getIndexesFromRange = tableHelpers.getIndexesFromRange
 
 export default class Cell {
   constructor (doc, cellData) {
@@ -121,10 +123,6 @@ export default class Cell {
     return this._source.transpiled
   }
 
-  get symbolMapping () {
-    return this._source.symbolMapping
-  }
-
   get symbols () {
     return this._source.symbols
   }
@@ -207,7 +205,7 @@ export default class Cell {
     } else if (source) {
       let res = transpile(source)
       transpiled = res.transpiledCode
-      symbols = res.symbols
+      symbols = res.symbols.map(s => this._augmentSymbol(s))
       symbolMapping = res.map
     }
 
@@ -218,5 +216,23 @@ export default class Cell {
       symbolMapping,
       isConstant
     }
+  }
+
+  _augmentSymbol (s) {
+    if (s.type === 'cell') {
+      let { startRow, startCol } = getIndexesFromRange(s.name)
+      s.startRow = s.endRow = startRow
+      s.startCol = s.endCol = startCol
+    } else if (s.type === 'range') {
+      let [start, end] = s.name.split(':')
+      let { startRow, startCol, endRow, endCol } = getIndexesFromRange(start, end)
+      s.startRow = startRow
+      s.startCol = startCol
+      s.endRow = endRow
+      s.endCol = endCol
+    }
+    s.origStr = s.text
+    s.cell = this
+    return s
   }
 }

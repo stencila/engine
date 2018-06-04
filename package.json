@@ -20,7 +20,7 @@
     "stencila-mini": "0.15.0",
     "substance": "1.0.0-preview.65",
     "substance-bundler": "^0.25.3",
-    "substance-test": "0.11.0",
+    "substance-test": "^0.12.2",
     "tap-spec": "^4.1.1",
     "tape": "^4.9.0"
   },

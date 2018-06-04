@@ -1,6 +1,5 @@
-import {
-  testAsync, setupEngine, getValues, getStates
-} from './testHelpers'
+import { testAsync } from 'substance-test'
+import { setupEngine, getValues, getStates } from './testHelpers'
 
 testAsync('JavascriptContext Integration: two consecutive cells', async t => {
   let { engine } = setupEngine()

@@ -216,7 +216,7 @@ export default class Engine extends EventEmitter {
   */
   _registerCell (cell) {
     this._graph.addCell(cell)
-    this._updateCell(cell.id, {})
+    this._resetCell(cell)
   }
 
   /*
@@ -237,8 +237,16 @@ export default class Engine extends EventEmitter {
     cell.status = UNKNOWN
     this._setAction(id, {
       id,
-      type: 'analyse',
-      cellData
+      type: 'analyse'
+    })
+  }
+
+  _resetCell (cell) {
+    const id = cell.id
+    cell.status = UNKNOWN
+    this._setAction(id, {
+      id,
+      type: 'analyse'
     })
   }
 
@@ -281,6 +289,8 @@ export default class Engine extends EventEmitter {
     const graph = this._graph
     const id = action.id
     const cell = graph.getCell(id)
+    // if the cell has been removed in the meantime
+    if (!cell) return
     // clear all errors which are not managed by the CellGraph
     cell.clearErrors(e => {
       return e.type !== 'graph'
@@ -384,11 +394,9 @@ export default class Engine extends EventEmitter {
     // EXPERIMENTAL: remove 'autorun' so that the cell is not updated forever
     delete cell.autorun
     // prepare inputs for the context
-    let data = cell.data
-    // mapping inputs into the cell format for the context
-    data.inputs = this._getInputValues(cell.inputs)
+    this._getInputValues(cell)
     // execute
-    let p = this.context.execute(data).then(res => {
+    let p = this.context.execute(cell.data).then(res => {
       if (this._isSuperseded(id, action)) {
       // console.log('action has been superseded')
         return
@@ -415,9 +423,11 @@ export default class Engine extends EventEmitter {
     }
   }
 
+  // create symbols that can be passed to the cell graph
   _compileSymbols (res, cell) {
-    const symbolMapping = cell.symbolMapping
+    const sourceSymbolMapping = cell._source.symbolMapping
     const docId = cell.docId
+    const symbolMapping = {}
     let inputs = new Set()
     // Note: the inputs here are given as mangledStr
     // typically we have detected these already during transpilation
@@ -430,27 +440,22 @@ export default class Engine extends EventEmitter {
         console.error('FIXME: input is in an unexpected format')
         name = input
       }
-      let symbol = symbolMapping[name]
+      let symbol = sourceSymbolMapping[name]
       // Note: the engine does not track function names as symbols
       // which are returned as input
       // in this case we create a locally bound symbol
       if (!symbol) {
-        symbol = new CellSymbol({
-          type: 'var',
-          name,
-          text: name,
-          mangledStr: name,
-          startPos: -1,
-          endPos: -1
-        }, docId, cell)
+        symbol = new CellSymbol('var', name, docId, cell)
       } else {
         // if there is a scope given explicily try to lookup the doc
         // otherwise it is a local reference, i.e. within the same document as the cell
         let targetDocId = symbol.scope ? this._lookupDocumentId(symbol.scope) : docId
-        symbol = new CellSymbol(symbol, targetDocId, cell)
+        symbol = new CellSymbol(symbol.type, symbol.name, targetDocId, cell)
       }
+      symbolMapping[name] = symbol
       inputs.add(symbol)
     })
+    cell._symbolMapping = symbolMapping
     // turn the output into a qualified id
     let output = res.outputs[0]
     if (output) output = _qualifiedId(docId, output.name)
@@ -471,10 +476,11 @@ export default class Engine extends EventEmitter {
     }
     ```
   */
-  _getInputValues (inputs) {
+  _getInputValues (cell) {
     const graph = this._graph
-    let result = []
-    for (let s of inputs) {
+    for (let input of cell.data.inputs) {
+      let symbolMapping = cell._symbolMapping
+      let s = symbolMapping[input.name]
       let val
       switch (s.type) {
         case 'cell': {
@@ -495,11 +501,8 @@ export default class Engine extends EventEmitter {
         default:
           val = graph.getValue(s) || graph._globals.get(s.name)
       }
-      // Note: the transpiled source code is used for evaluation
-      // thus we expose values via transpiled/mangled names here
-      result.push({ name: s.mangledStr, value: val })
+      input.value = val
     }
-    return result
   }
 
   _lookupDocumentId (name) {

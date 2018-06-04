@@ -1,4 +1,3 @@
-import test from 'tape'
 import { isArray, tableHelpers } from 'substance'
 import { JavascriptContext } from 'stencila-js'
 import Engine from '../src/Engine'
@@ -9,21 +8,6 @@ import { libtest } from './libtest'
 import TestContext from './TestContext'
 
 const { getRowCol, getIndexesFromRange, getRangeFromMatrix } = tableHelpers
-
-export function testAsync (name, func) {
-  test(name, async assert => {
-    let success = false
-    try {
-      await func(assert)
-      success = true
-    } finally {
-      if (!success) {
-        assert.fail('Test failed with an uncaught exception.')
-        assert.end()
-      }
-    }
-  })
-}
 
 export function setupEngine () {
   let context = new TestContext()
