@@ -1,4 +1,4 @@
-import CompositeContext from '../src/CompositeContext'
+import { CompositeContext } from '../index'
 
 export default class TestContext extends CompositeContext {
   constructor () {

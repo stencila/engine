@@ -1,5 +1,5 @@
 import test from 'tape'
-import { transpile } from '../src/engineHelpers'
+import { transpile } from '../index'
 
 test('transpile: local variables should not be transpiled', t => {
   let source = 'x + y'

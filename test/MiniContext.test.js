@@ -1,8 +1,7 @@
 import { test, testAsync } from 'substance-test'
 import { map } from 'substance'
 import { JavascriptContext } from 'stencila-js'
-import MiniContext from '../src/MiniContext'
-import setupContext from '../src/setupContext'
+import { MiniContext, setupContext } from '../index'
 import { libtest } from './libtest'
 
 test('MiniContext: compile(x=5)', t => {

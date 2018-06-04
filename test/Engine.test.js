@@ -1,7 +1,5 @@
 import { testAsync } from 'substance-test'
-import { UNKNOWN } from '../src/CellStates'
-import { RuntimeError } from '../src/CellErrors'
-import { BROKEN_REF } from '../src/engineHelpers'
+import { UNKNOWN, BROKEN_REF, RuntimeError } from '../index'
 import {
   setupEngine, getValue, getValues, getSources, getStates, getErrors, queryCells
 } from './testHelpers'

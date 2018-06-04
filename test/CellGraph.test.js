@@ -1,8 +1,8 @@
-import test from 'tape'
-import CellGraph from '../src/CellGraph'
-import Cell from '../src/Cell'
-import { SyntaxError, RuntimeError, ContextError } from '../src/CellErrors'
-import { UNKNOWN, ANALYSED, BROKEN, BLOCKED, WAITING, READY, OK, FAILED } from '../src/CellStates'
+import { test } from 'substance-test'
+import {
+  CellGraph, Cell, SyntaxError, RuntimeError, ContextError,
+  UNKNOWN, ANALYSED, BROKEN, BLOCKED, WAITING, READY, OK, FAILED
+} from '../index'
 
 /*
  add a single cell with no deps

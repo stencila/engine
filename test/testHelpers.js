@@ -1,9 +1,6 @@
 import { isArray, tableHelpers } from 'substance'
 import { JavascriptContext } from 'stencila-js'
-import Engine from '../src/Engine'
-import { cellStateToString } from '../src/CellStates'
-import MiniContext from '../src/MiniContext'
-import { parseSymbol } from '../src/engineHelpers'
+import { Engine, cellStateToString, MiniContext, parseSymbol } from '../index'
 import { libtest } from './libtest'
 import TestContext from './TestContext'
 
