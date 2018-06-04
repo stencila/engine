@@ -1,29 +1,10 @@
-import test from 'tape'
 import { isArray, tableHelpers } from 'substance'
 import { JavascriptContext } from 'stencila-js'
-import Engine from '../src/Engine'
-import { cellStateToString } from '../src/CellStates'
-import MiniContext from '../src/MiniContext'
-import { parseSymbol } from '../src/engineHelpers'
+import { Engine, cellStateToString, MiniContext, parseSymbol } from '../index'
 import { libtest } from './libtest'
 import TestContext from './TestContext'
 
 const { getRowCol, getIndexesFromRange, getRangeFromMatrix } = tableHelpers
-
-export function testAsync (name, func) {
-  test(name, async assert => {
-    let success = false
-    try {
-      await func(assert)
-      success = true
-    } finally {
-      if (!success) {
-        assert.fail('Test failed with an uncaught exception.')
-        assert.end()
-      }
-    }
-  })
-}
 
 export function setupEngine () {
   let context = new TestContext()
@@ -31,13 +12,15 @@ export function setupEngine () {
     contexts: [
       { id: 'mickey', lang: 'mini', client: MiniContext },
       { id: 'goofy', lang: 'js', client: JavascriptContext }
+    ],
+    libraries: [
+      { lang: 'js', lib: libtest }
     ]
   })
-  let jsContext = context.getLanguageContext('js')
-  jsContext.importLibrary(libtest)
-
   let engine = new Engine(context)
   // EXPERIMENTAL: register all library content as globals
+  let jsContext = context.getLanguageContext('js')
+  let miniContext = context.getLanguageContext('mini')
   let names = Object.keys(libtest.funcs)
   names.forEach(name => {
     // TODO: do we want that extra level here?
@@ -45,19 +28,16 @@ export function setupEngine () {
     // be simplified
     engine._addGlobal(name, {
       type: 'function',
-      value: {
-        type: 'function',
-        data: {
-          name,
-          library: libtest.name,
-          context: jsContext.id
-        }
+      data: {
+        name,
+        library: libtest.name,
+        context: jsContext.id
       }
     })
   })
 
   let graph = engine._graph
-  return { engine, context, graph }
+  return { engine, context, graph, miniContext, jsContext }
 }
 
 export function getValue (cell) {

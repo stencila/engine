@@ -1,9 +1,7 @@
-import { UNKNOWN } from '../src/CellStates'
-import { RuntimeError } from '../src/CellErrors'
-import { BROKEN_REF } from '../src/engineHelpers'
+import { testAsync } from 'substance-test'
+import { UNKNOWN, BROKEN_REF, RuntimeError } from '../index'
 import {
-  setupEngine, getValue, getValues, getSources, getStates, getErrors,
-  queryCells, testAsync
+  setupEngine, getValue, getValues, getSources, getStates, getErrors, queryCells
 } from './testHelpers'
 
 testAsync('Engine: simple sheet', async t => {
@@ -786,13 +784,14 @@ testAsync('Engine: delete columns covering an entire cell range', async t => {
     cells: [
       ['1', '2', '3', '4'],
       ['5', '6', '7', '8'],
-      ['=sum(A1:A2)', '=B2+B3', '=C2+C3', '=A3+B3+C3']
+      ['=sum(A1:A2)', '=sum(B1:B2)', '=C1+C2', '=A3+B3+C3']
     ]
   })
   await engine.runOnce()
   sheet.deleteCols(1, 2)
   await engine.runOnce()
-  t.deepEqual(getSources(queryCells(sheet.cells, 'A3:B3')), [`=sum(A1:A2)`, `=A3+${BROKEN_REF}+${BROKEN_REF}`], 'sources should have been updated')
+  let cells = queryCells(sheet.cells, 'A3:B3')
+  t.deepEqual(getSources(cells), [`=sum(A1:A2)`, `=A3+${BROKEN_REF}+${BROKEN_REF}`], 'sources should have been updated')
   t.end()
 })
 

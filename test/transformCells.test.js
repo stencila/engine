@@ -1,8 +1,9 @@
 import test from 'tape'
 import { forEach } from 'substance'
-import { recordTransformations, applyCellTransformations, BROKEN_REF } from '../src/engineHelpers'
-import Cell from '../src/Cell'
-import CellSymbol from '../src/CellSymbol'
+import {
+  Cell, CellSymbol, BROKEN_REF,
+  recordTransformations, applyCellTransformations
+} from '../index'
 
 const MSG = 'expression should be transformed correctly'
 
@@ -293,16 +294,27 @@ test('transformCell: range / row / delete after', (t) => {
   t.end()
 })
 
+test('transformCell: "B2+B3', (t) => {
+  let cell = _createCell('B2+B3')
+  let dim = 'row'
+  let pos = 1
+  let count = -2
+  _transformCell(cell, dim, pos, count)
+  t.equal(cell.source, `${BROKEN_REF}+${BROKEN_REF}`, MSG)
+  t.end()
+})
+
 function _createCell (source) {
   let cell = new Cell(null, {source})
   // Note: faking code analysis usually done by Engine
   forEach(cell._source.symbolMapping, s => {
-    cell.inputs.add(new CellSymbol(s, 'doc', cell))
+    cell.inputs.add(new CellSymbol(s.type, s.name, 'doc', cell))
   })
   return cell
 }
 
 function _transformCell (cell, dim, pos, count) {
-  recordTransformations({ deps: cell.inputs }, dim === 'row' ? 0 : 1, pos, count)
+  cell.deps = [cell]
+  recordTransformations([cell], dim === 'row' ? 0 : 1, pos, count)
   applyCellTransformations(cell)
 }

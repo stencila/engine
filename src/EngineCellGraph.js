@@ -6,30 +6,57 @@ export default class EngineCellGraph extends CellGraph {
     super()
 
     this._engine = engine
+    // forward dependencies / impact
+    // for a every sheet cell all other cells that depend on it via cell or range ref
+    // id -> Set
+    this._sheetCellOuts = {}
+    // id -> Set
+    this._sheetCellIns = {}
   }
 
   _getDoc (s) {
     return this._engine._docs[s.docId]
   }
 
+  // Note: this is overridden to register and deregister
+  // cell dependencies expressed by cell or range references
   _setInputs (cell, newInputs) {
-    let oldInputs = cell.inputs
     super._setInputs(cell, newInputs)
-    oldInputs.forEach(s => {
-      if (s.type !== 'var') {
-        let sheet = this._getDoc(s)
-        if (sheet) {
-          sheet._removeDep(s)
+
+    // first remove the cell from all the cells it has depended on first
+    let oldDeps = this._sheetCellIns[cell.id]
+    if (oldDeps) {
+      oldDeps.forEach(dep => {
+        let _deps = this._sheetCellOuts[dep.id]
+        if (_deps) {
+          _deps.delete(cell)
         }
-      }
-    })
+      })
+    }
+
     newInputs.forEach(s => {
       if (s.type !== 'var') {
         let sheet = this._getDoc(s)
         if (sheet) {
-          sheet._addDep(s)
+          let deps = sheet._getCellsForRange(s)
+          this._addDependencies(cell, deps)
         }
       }
+    })
+  }
+
+  _addDependencies (cell, deps) {
+    let ins = this._sheetCellIns[cell.id]
+    if (!ins) {
+      ins = this._sheetCellIns[cell.id] = new Set()
+    }
+    deps.forEach(dep => {
+      let outs = this._sheetCellOuts[dep.id]
+      if (!outs) {
+        outs = this._sheetCellOuts[dep.id] = new Set()
+      }
+      outs.add(cell)
+      ins.add(dep)
     })
   }
 
@@ -64,7 +91,8 @@ export default class EngineCellGraph extends CellGraph {
     // Note: in addition to explicit dependencies of sheet cells
     // we add all cells that depend on this cell via a cell or range expression
     if (cell.isSheetCell()) {
-      cell.deps.forEach(s => affected.push(s.cell.id))
+      let cells = this._sheetCellOuts[cell.id]
+      if (cells) cells.forEach(cell => affected.push(cell.id))
     }
     return affected
   }

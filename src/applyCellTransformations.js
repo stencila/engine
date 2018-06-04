@@ -1,13 +1,17 @@
 import { tableHelpers } from 'substance'
 import { BROKEN_REF } from './engineConstants'
-import qualifiedId from './qualifiedId'
-import toIdentifier from './toIdentifier'
 
+// TODO: need to rethink if it is possible to get rid
+// of the redundancy, or have a cleaner way to derive everything after update
 export default function applyCellTransformations (cell) {
-  let symbols = Array.from(cell.inputs).sort((a, b) => a.startPos - b.startPos)
+  let symbols = cell.symbols
   let source = cell._source
-  let offset = 0
-  for (let i = 0; i < symbols.length; i++) {
+  let oldSource = source.original
+  let newSource = oldSource
+  // ATTENTION: iterating symbols backwards so that code transformation does
+  // not invalidate character indexes in symbols
+  // For that symbols must be sorted by pos, which they are
+  for (let i = symbols.length - 1; i >= 0; i--) {
     let s = symbols[i]
     let update = s._update
     if (!update) continue
@@ -16,68 +20,44 @@ export default function applyCellTransformations (cell) {
     let oldName = s.name
     let oldScope = s.scope
     let oldOrigStr = s.origStr
-    let oldMangledStr = s.mangledStr
-    let newName = oldName
-    let newScope = oldScope
     let newOrigStr = oldOrigStr
-    let newMangledStr = oldMangledStr
     switch (update.type) {
       case 'insertRows':
       case 'deleteRows': {
         s.startRow = update.start
         s.endRow = update.end
-        newName = getCellSymbolName(s)
+        let newName = getCellSymbolName(s)
         newOrigStr = oldOrigStr.replace(oldName, newName)
-        newMangledStr = oldMangledStr.replace(toIdentifier(oldName), toIdentifier(newName))
         break
       }
       case 'insertCols':
       case 'deleteCols': {
         s.startCol = update.start
         s.endCol = update.end
-        newName = getCellSymbolName(s)
+        let newName = getCellSymbolName(s)
         newOrigStr = oldOrigStr.replace(oldName, newName)
-        newMangledStr = oldMangledStr.replace(toIdentifier(oldName), toIdentifier(newName))
         break
       }
       case 'broken': {
         s.type = 'var'
         s.startRow = s.startCol = s.endRow = s.endCol = null
-        newName = BROKEN_REF
         newOrigStr = BROKEN_REF
-        newMangledStr = BROKEN_REF
         break
       }
       case 'rename': {
         if (oldScope) {
-          newOrigStr = oldOrigStr.replace(oldScope, update.scope)
-          newMangledStr = oldMangledStr.replace(toIdentifier(oldScope), toIdentifier(update.scope))
+          let newScope = update.scope
+          newOrigStr = oldOrigStr.replace(oldScope, newScope)
         }
         break
       }
       default:
         throw new Error('Illegal state')
     }
-    let newStartPos = s.startPos + offset
-    let newEndPos = newStartPos + newOrigStr.length
-    let newSource = source.original.slice(0, s.startPos + offset) + newOrigStr + source.original.slice(s.endPos + offset)
-    let newTranspiled = source.transpiled.slice(0, s.startPos + offset) + newMangledStr + source.transpiled.slice(s.endPos + offset)
-
-    // finally write the updated values
-    s.name = newName
-    s.id = qualifiedId(s.docId, newName)
-    s.scope = newScope
-    s.origStr = newOrigStr
-    s.mangledStr = newMangledStr
-    s.startPos = newStartPos
-    s.endPos = newEndPos
-    source.original = newSource
-    source.transpiled = newTranspiled
-    source.symbolMapping[newMangledStr] = s
-    delete source.symbolMapping[oldMangledStr]
-    // update the offset if the source is getting longer because of this change
-    // this has an effect on all subsequent symbols
-    offset += newOrigStr.length - oldOrigStr.length
+    newSource = newSource.slice(0, s.startPos) + newOrigStr + newSource.slice(s.endPos)
+  }
+  if (newSource !== oldSource) {
+    cell.source = newSource
   }
 }
 

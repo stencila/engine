@@ -1,4 +1,4 @@
-import { isString, EventEmitter, flatten, forEach, tableHelpers } from 'substance'
+import { platform, isString, EventEmitter, flatten, forEach, tableHelpers } from 'substance'
 import { CellError, RuntimeError, SyntaxError } from './CellErrors'
 import { UNKNOWN, ANALYSED, READY, cellStateToInteger } from './CellStates'
 import CellSymbol from './CellSymbol'
@@ -216,7 +216,7 @@ export default class Engine extends EventEmitter {
   */
   _registerCell (cell) {
     this._graph.addCell(cell)
-    this._updateCell(cell.id, {})
+    this._resetCell(cell)
   }
 
   /*
@@ -237,8 +237,16 @@ export default class Engine extends EventEmitter {
     cell.status = UNKNOWN
     this._setAction(id, {
       id,
-      type: 'analyse',
-      cellData
+      type: 'analyse'
+    })
+  }
+
+  _resetCell (cell) {
+    const id = cell.id
+    cell.status = UNKNOWN
+    this._setAction(id, {
+      id,
+      type: 'analyse'
     })
   }
 
@@ -281,6 +289,8 @@ export default class Engine extends EventEmitter {
     const graph = this._graph
     const id = action.id
     const cell = graph.getCell(id)
+    // if the cell has been removed in the meantime
+    if (!cell) return
     // clear all errors which are not managed by the CellGraph
     cell.clearErrors(e => {
       return e.type !== 'graph'
@@ -310,6 +320,7 @@ export default class Engine extends EventEmitter {
     const isExpr = cell.isSheetCell()
     const transpiledSource = cell.transpiledSource
     return this.context.compile({
+      id: cell.id,
       code: transpiledSource,
       lang,
       expr: isExpr
@@ -319,8 +330,11 @@ export default class Engine extends EventEmitter {
         return
       }
       this._currentActions.delete(id)
-      // stop if this was aboreted or there is already a new action for this id
-      if (!res) return
+      // storing the cell representation of the context
+      cell.data = res
+      // make sure that the cell id is set
+      res.id = id
+
       // Note: treating all errors coming from analyseCode() as SyntaxErrors
       // TODO: we might want to be more specific here
       if (res.messages && res.messages.length > 0) {
@@ -336,22 +350,26 @@ export default class Engine extends EventEmitter {
         }))
       }
       // console.log('analysed cell', cell, res)
+
+      // mapping the result from the context to the engine's internal format
       let inputs = new Set()
+      // TODO: at some point we want to allow for multiple outputs
       let output = null
-      if (res.inputs.size > 0 || res.outputs.length > 0) {
+      if (res.inputs.length > 0 || res.outputs.length > 0) {
         // transform the extracted symbols into fully-qualified symbols
         // e.g. in `x` in `sheet1` is compiled into `sheet1.x`
-        // Note: to make the app more robust we are doing this in
-        //   a try catch block, and create a rather unspecifc SyntaxError.
-        //   This can happen when the transpiled code is not producing
-        //   a syntax error but not producing expected input symbols.
-        try {
-          ({ inputs, output } = this._compileSymbols(res, cell))
-        } catch (error) {
-          console.error(error)
-          cell.status = ANALYSED
-          graph.addErrors(id, [new SyntaxError('Invalid syntax')])
-        }
+        // At this point symbols are bound to a specific scope
+        ({ inputs, output } = this._compileSymbols(res, cell))
+
+        // TODO: this was originally here to make the app more robust
+        // but trying to get rid it
+        // try {
+        //   ({ inputs, output } = this._compileSymbols(res, cell))
+        // } catch (error) {
+        //   console.error(error)
+        //   cell.status = ANALYSED
+        //   graph.addErrors(id, [new SyntaxError('Invalid syntax')])
+        // }
       }
       this._setAction(id, {
         type: 'register',
@@ -373,84 +391,71 @@ export default class Engine extends EventEmitter {
     })
     // console.log('evaluating cell', cell.toString())
     this._currentActions.set(id, action)
-
-    const lang = cell.getLang()
-    const isExpr = cell.isSheetCell()
-    let transpiledSource = cell.transpiledSource
     // EXPERIMENTAL: remove 'autorun' so that the cell is not updated forever
     delete cell.autorun
-    // prepare inputs
-    let inputs = this._getInputValues(cell.inputs)
-    let outputs = []
-    if (cell.output) outputs.push({name: cell.output.name})
+    // prepare inputs for the context
+    this._getInputValues(cell)
     // execute
-    return this.context.execute({
-      id: cell.id,
-      lang,
-      expr: isExpr,
-      code: transpiledSource,
-      inputs,
-      outputs
-    }).then(res => {
+    let p = this.context.execute(cell.data).then(res => {
       if (this._isSuperseded(id, action)) {
       // console.log('action has been superseded')
         return
       }
       this._currentActions.delete(id)
-      // stop if this was aboreted or there is already a new action for this id
-      if (res) {
-        let value
-        let output = res.outputs[0]
-        if (output) value = output.value
-        this._setAction(id, {
-          type: 'update',
-          id,
-          errors: res.messages,
-          value
-        })
-      }
-    }).catch(err => {
-      console.error(err)
-      graph.addError(id, new RuntimeError(err.message, err))
+      let value
+      let output = res.outputs[0]
+      if (output) value = output.value
+      this._setAction(id, {
+        type: 'update',
+        id,
+        errors: res.messages,
+        value
+      })
     })
+    // only when console is closed catch any exception
+    if (!platform.devtools) {
+      return p.catch(err => {
+        console.error(err)
+        graph.addError(id, new RuntimeError('Internal error', err))
+      })
+    } else {
+      return p
+    }
   }
 
+  // create symbols that can be passed to the cell graph
   _compileSymbols (res, cell) {
-    const symbolMapping = cell.symbolMapping
+    const sourceSymbolMapping = cell._source.symbolMapping
     const docId = cell.docId
+    const symbolMapping = {}
     let inputs = new Set()
     // Note: the inputs here are given as mangledStr
     // typically we have detected these already during transpilation
     // Let's wait for it to happen where this is not the case
     res.inputs.forEach(input => {
       let name = input.name
-      if (isString(input)) name = input
-      // Note: during transpilation we identify some more symbols
-      // which are actually not real variables
-      // e.g. for `sum(A1:B10)` would detect 'sum' as a potential variable
-      // due to the lack of language reflection at this point.
-      let symbol = symbolMapping[name]
-      // some symbols can occur which are not tracked by us
-      // e.g. in Mini the '+' operator is implemented via cakk to 'add()'
+      // HACK
+      // TODO: when do we need this?
+      if (isString(input)) {
+        console.error('FIXME: input is in an unexpected format')
+        name = input
+      }
+      let symbol = sourceSymbolMapping[name]
+      // Note: the engine does not track function names as symbols
+      // which are returned as input
+      // in this case we create a locally bound symbol
       if (!symbol) {
-        // HACK
-        // in this case we create a symbol that points to the local scope
-        symbol = new CellSymbol({
-          type: 'var',
-          name,
-          text: name,
-          mangledStr: name,
-          startPos: -1,
-          endPos: -1
-        }, docId, cell)
+        symbol = new CellSymbol('var', name, docId, cell)
       } else {
         // if there is a scope given explicily try to lookup the doc
         // otherwise it is a local reference, i.e. within the same document as the cell
         let targetDocId = symbol.scope ? this._lookupDocumentId(symbol.scope) : docId
-        symbol = new CellSymbol(symbol, targetDocId, cell)
+        symbol = new CellSymbol(symbol.type, symbol.name, targetDocId, cell)
       }
+      symbolMapping[name] = symbol
       inputs.add(symbol)
     })
+    cell._symbolMapping = symbolMapping
     // turn the output into a qualified id
     let output = res.outputs[0]
     if (output) output = _qualifiedId(docId, output.name)
@@ -471,10 +476,11 @@ export default class Engine extends EventEmitter {
     }
     ```
   */
-  _getInputValues (inputs) {
+  _getInputValues (cell) {
     const graph = this._graph
-    let result = new Map()
-    for (let s of inputs) {
+    for (let input of cell.data.inputs) {
+      let symbolMapping = cell._symbolMapping
+      let s = symbolMapping[input.name]
       let val
       switch (s.type) {
         case 'cell': {
@@ -495,11 +501,8 @@ export default class Engine extends EventEmitter {
         default:
           val = graph.getValue(s) || graph._globals.get(s.name)
       }
-      // Note: the transpiled source code is used for evaluation
-      // thus we expose values via transpiled/mangled names here
-      result.set(s.mangledStr, val)
+      input.value = val
     }
-    return result
   }
 
   _lookupDocumentId (name) {

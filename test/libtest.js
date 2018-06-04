@@ -34,6 +34,7 @@ const multiply = {
 
 function sum (...vals) {
   return vals.reduce((a, b) => {
+    if (!b) return a
     if (b.type === 'table') {
       forEach(b.data, (vals) => {
         a += sum(vals)

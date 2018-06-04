@@ -1,4 +1,4 @@
-import test from 'tape'
+import { test } from 'substance-test'
 import { isExpression, parseValue } from '../src/engineHelpers'
 
 test('engineHelpers: isExpression()', t => {

@@ -1,4 +1,5 @@
 import { ContextError } from './CellErrors'
+import { pack, unpack } from './types'
 
 export default class CompositeContext {
   constructor () {
@@ -20,6 +21,11 @@ export default class CompositeContext {
     })
     this._contexts = contexts
     this._lang2context = lang2context
+
+    config.libraries.forEach(({lang, lib}) => {
+      let langContext = this.getLanguageContext(lang)
+      langContext.importLibrary(lib)
+    })
   }
 
   getLanguageContext (lang) {
@@ -57,23 +63,31 @@ export default class CompositeContext {
     @param {object} a Map with packed values by name
   */
   async callFunction (funcValue, args, namedArgs) {
-    const funcSpec = funcValue.value.data
-    if (!funcSpec.context) {
-      throw new Error('funcSpec.context is mandatory')
+    const contextId = funcValue.data.context
+    if (!contextId) {
+      throw new Error('context is mandatory')
     }
     // TODO: instead of storing contexts via language
     // I would prefer to store them by id
     // and do the language mapping extra
-    let context = this._contexts[funcSpec.context]
+    let context = this._contexts[contextId]
     if (!context) {
       throw new Error('No context registered for language')
     }
     let call = {
       type: 'call',
-      func: funcSpec,
+      func: funcValue,
       args,
       namedArgs
     }
     return context.evaluateCall(call)
+  }
+
+  pack (value, options) {
+    return pack(value, options)
+  }
+
+  unpack (pkg) {
+    return unpack(pkg)
   }
 }

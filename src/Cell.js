@@ -1,6 +1,8 @@
-import { isString } from 'substance'
+import { isString, tableHelpers } from 'substance'
 import { UNKNOWN, cellStateToString } from './CellStates'
 import { transpile, isExpression, qualifiedId } from './engineHelpers'
+
+const getIndexesFromRange = tableHelpers.getIndexesFromRange
 
 export default class Cell {
   constructor (doc, cellData) {
@@ -31,11 +33,14 @@ export default class Cell {
 
     this.lang = lang
 
-    // the source code is transpiled to an object with
-    // - (original) source
-    // - transpiledSource
-    // - symbolMapping
-    // - isConstant
+    /*
+     The source code is transpiled to an object
+     - original
+     - transpiledSource
+     - symbols
+     - symbolMapping: map from transpiled names to original names
+     - isContant
+    */
     this._source = this._transpile(source)
 
     // managed by CellGraph
@@ -118,8 +123,8 @@ export default class Cell {
     return this._source.transpiled
   }
 
-  get symbolMapping () {
-    return this._source.symbolMapping
+  get symbols () {
+    return this._source.symbols
   }
 
   isConstant () {
@@ -169,6 +174,7 @@ export default class Cell {
   _transpile (source) {
     let original = source
     let transpiled
+    let symbols = []
     let symbolMapping = {}
     let isConstant = false
     // in sheets there is a distinction between constants and
@@ -190,19 +196,43 @@ export default class Cell {
           prefix.fill(' ')
           source = prefix + source.slice(L)
         }
-        transpiled = transpile(source, symbolMapping)
       } else {
         isConstant = true
-        transpiled = original
       }
-    } else {
-      transpiled = transpile(source, symbolMapping)
     }
+    if (isConstant) {
+      transpiled = original
+    } else if (source) {
+      let res = transpile(source)
+      transpiled = res.transpiledCode
+      symbols = res.symbols.map(s => this._augmentSymbol(s))
+      symbolMapping = res.map
+    }
+
     return {
       original,
       transpiled,
+      symbols,
       symbolMapping,
       isConstant
     }
+  }
+
+  _augmentSymbol (s) {
+    if (s.type === 'cell') {
+      let { startRow, startCol } = getIndexesFromRange(s.name)
+      s.startRow = s.endRow = startRow
+      s.startCol = s.endCol = startCol
+    } else if (s.type === 'range') {
+      let [start, end] = s.name.split(':')
+      let { startRow, startCol, endRow, endCol } = getIndexesFromRange(start, end)
+      s.startRow = startRow
+      s.startCol = startCol
+      s.endRow = endRow
+      s.endCol = endCol
+    }
+    s.origStr = s.text
+    s.cell = this
+    return s
   }
 }

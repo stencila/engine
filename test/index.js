@@ -1,7 +1,8 @@
 import './CellGraph.test.js'
 import './Engine.test.js'
 import './engineHelpers.test.js'
-// TODO: should be moved to stencila-mini
+import './JavascriptContext.integration.test.js'
 import './MiniContext.test.js'
+import './Sheet.test.js'
 import './transformCells.test.js'
 import './transpile.test.js'
