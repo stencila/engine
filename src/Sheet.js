@@ -279,7 +279,7 @@ export default class Sheet {
   Records symbol updates and applies to cells.
   Additionally determines cells that have a symbol that is spanning
   over the insertion position.
-s*/
+*/
 function transformCells (engine, cells, dim, pos, count, affected) {
   if (count === 0) return
   // track updates for symbols and affected cells
