@@ -132,7 +132,11 @@ export default class MiniContext {
       }
       cell.outputs = [output]
     } catch (err) {
-      cell.messages = [err]
+      console.error(err)
+      cell.messages = [{
+        type: 'error',
+        message: err.message
+      }]
     }
     return cell
   }
