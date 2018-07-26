@@ -30,6 +30,8 @@
     ]
   },
   "scripts": {
+    "prepack": "npm install && npm run build",
+    "build": "node make",
     "cover": "nyc --require esm --reporter=lcov --reporter=text node test",
     "lint": "standard src/**/*.js test/**/*.js",
     "test": "node --require esm test | tap-spec"
