@@ -1,4 +1,4 @@
-import { platform, isString, EventEmitter, flatten, forEach, tableHelpers } from 'substance'
+import { isString, EventEmitter, flatten, forEach, tableHelpers } from 'substance'
 import { CellError, RuntimeError, SyntaxError } from './CellErrors'
 import { UNKNOWN, ANALYSED, READY, cellStateToInteger } from './CellStates'
 import CellSymbol from './CellSymbol'
