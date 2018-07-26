@@ -63,7 +63,9 @@ export default class CompositeContext {
     @param {object} a Map with packed values by name
   */
   async callFunction (funcValue, args, namedArgs) {
-    const contextId = funcValue.data.context
+    // HACK: this is being used inconsistently
+    let data = funcValue.data || funcValue.value.data
+    const contextId = data.context
     if (!contextId) {
       throw new Error('context is mandatory')
     }

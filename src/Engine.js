@@ -412,15 +412,10 @@ export default class Engine extends EventEmitter {
         value
       })
     })
-    // only when console is closed catch any exception
-    if (!platform.devtools) {
-      return p.catch(err => {
-        console.error(err)
-        graph.addError(id, new RuntimeError('Internal error', err))
-      })
-    } else {
-      return p
-    }
+    return p.catch(err => {
+      console.error(err)
+      graph.addError(id, new RuntimeError('Internal error', err))
+    })
   }
 
   // create symbols that can be passed to the cell graph

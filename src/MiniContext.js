@@ -120,16 +120,20 @@ export default class MiniContext {
     }
     const outputName = expr.name
     let adapter = new _MiniContextAdapter(this, cell.inputs)
-    let value = await expr.evaluate(adapter)
-    if (adapter.messages.length > 0) {
-      cell.messages = adapter.messages
+    try {
+      let value = await expr.evaluate(adapter)
+      if (adapter.messages.length > 0) {
+        cell.messages = adapter.messages
+      }
+      // HACK: Mini allows only one output
+      let output = {value}
+      if (outputName) {
+        output.name = outputName
+      }
+      cell.outputs = [output]
+    } catch (err) {
+      cell.messages = [err]
     }
-    // HACK: Mini allows only one output
-    let output = {value}
-    if (outputName) {
-      output.name = outputName
-    }
-    cell.outputs = [output]
     return cell
   }
 }
@@ -152,6 +156,7 @@ class _MiniContextAdapter {
   // coerce and pack
   pack (value, ctx) {
     if (ctx === 'array') {
+      value = value.map(v => pack(v))
       return coerceArray(value)
     }
     return pack(value)
