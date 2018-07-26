@@ -1,6 +1,6 @@
 {
   "name": "stencila-engine",
-  "version": "0.1.0",
+  "version": "0.2.0-preview.1",
   "description": "The Execution Engine \u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5C\u001b[1;5C\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5D\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[1;5C\u001b[ for Stencila Cells.",
   "main": "dist/engine.cjs.js",
   "jsnext:main": "index.js",
